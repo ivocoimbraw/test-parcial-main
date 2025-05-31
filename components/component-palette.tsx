@@ -26,12 +26,20 @@ interface ComponentItemProps {
   name: string
   icon: React.ReactNode
   properties?: Record<string, any>
+  style?: Record<string, any>
 }
 
-function ComponentItem({ type, name, icon, properties = {} }: ComponentItemProps) {
+const defaultStyle = {
+  fontSize: 16,
+  borderRadius: 5,
+  color: "#000000",
+  backgroundColor: "#ffffff",
+}
+
+function ComponentItem({ type, name, icon, properties, style = {} }: ComponentItemProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "COMPONENT",
-    item: { type, properties },
+    item: { type, properties, style },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
@@ -61,7 +69,6 @@ export default function ComponentPalette() {
           <TabsTrigger value="basic">Basic</TabsTrigger>
           <TabsTrigger value="layout">Layout</TabsTrigger>
           <TabsTrigger value="input">Input</TabsTrigger>
-          <TabsTrigger value="navigation">Navigation</TabsTrigger>
         </TabsList>
         <ScrollArea className="flex-1">
           <TabsContent value="basic" className="p-3 space-y-2">
@@ -70,30 +77,28 @@ export default function ComponentPalette() {
               name="Text"
               icon={<Type size={16} />}
               properties={{ text: "Text" }}
+              style={{ ...defaultStyle, width: 35, height: 30 }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.BUTTON}
               name="Primary Button"
               icon={<Square size={16} />}
               properties={{ text: "Button", variant: "primary" }}
-            />
-            <ComponentItem
-              type={COMPONENT_TYPES.BUTTON}
-              name="Outline Button"
-              icon={<Square size={16} />}
-              properties={{ text: "Button", variant: "outline" }}
+              style={{ ...defaultStyle, width: 50, height: 30, backgroundColor: "#4184f0", color:"#ffff" }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.CARD}
               name="Card"
               icon={<Layout size={16} />}
               properties={{ title: "Card Title", content: "Card content goes here" }}
+              style={{ ...defaultStyle, width: 50, height: 30 }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.ICON}
               name="Icon"
               icon={<Star size={16} />}
               properties={{ icon: "star", size: 24 }}
+              style={{ ...defaultStyle, width: 25, height: 25}}
             />
             <ComponentItem
               type={COMPONENT_TYPES.SLIDER}
@@ -108,94 +113,64 @@ export default function ComponentPalette() {
               name="Container"
               icon={<Square size={16} />}
               properties={{ padding: 16, color: "#FFFFFF" }}
-            />
-            <ComponentItem
-              type={COMPONENT_TYPES.ROW}
-              name="Row"
-              icon={<AlignJustify size={16} />}
-              properties={{ mainAxisAlignment: "start", crossAxisAlignment: "center" }}
-            />
-            <ComponentItem
-              type={COMPONENT_TYPES.COLUMN}
-              name="Column"
-              icon={<AlignJustify size={16} className="rotate-90" />}
-              properties={{ mainAxisAlignment: "start", crossAxisAlignment: "center" }}
+              style={{ ...defaultStyle, width: 150, height: 150}}
             />
             <ComponentItem
               type={COMPONENT_TYPES.STACK}
               name="Stack"
               icon={<Layers size={16} />}
               properties={{ alignment: "center" }}
+              style={{ ...defaultStyle, width: 150, height: 150}}
             />
             <ComponentItem
               type={COMPONENT_TYPES.LIST_VIEW}
               name="List View"
               icon={<AlignJustify size={16} />}
               properties={{ itemCount: 3, scrollDirection: "vertical" }}
+              style={{ ...defaultStyle, width: 150, height: 200 }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.TABLE}
               name="Table"
               icon={<Table size={16} />}
               properties={{ rows: 3, columns: 3, headers: ["Column 1", "Column 2", "Column 3"] }}
-            />
-            <ComponentItem
-              type={COMPONENT_TYPES.FORM}
-              name="Form"
-              icon={<FileText size={16} />}
-              properties={{ title: "Form Title", padding: 16 }}
+              style={{ ...defaultStyle, width: 300, height: 200 }}
             />
           </TabsContent>
           <TabsContent value="input" className="p-3 space-y-2">
             <ComponentItem
-              type={COMPONENT_TYPES.INPUT}
-              name="Input with Label"
-              icon={<FormInput size={16} />}
-              properties={{ label: "Label", placeholder: "Enter text", required: false, type: "text" }}
-            />
-            <ComponentItem
               type={COMPONENT_TYPES.TEXT_FIELD}
               name="Text Field"
               icon={<Type size={16} />}
-              properties={{ label: "Label", hint: "Hint text" }}
+              properties={{ hint: "Hint text" }}
+              style={{ ...defaultStyle, width: 100, height: 30, backgroundColor: "#dedede" }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.CHECKBOX}
               name="Checkbox"
               icon={<Square size={16} />}
               properties={{ label: "Checkbox", value: false }}
+              style={{ ...defaultStyle, width: 150, height: 30, backgroundColor: "#dedede" }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.SWITCH}
               name="Switch"
               icon={<ToggleLeft size={16} />}
               properties={{ value: false }}
+              style={{ ...defaultStyle, width: 40, height: 30 }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.RADIO}
               name="Radio Button"
               icon={<Square size={16} />}
               properties={{ label: "Option", value: "option", groupValue: "option" }}
+              style={{ ...defaultStyle, width: 70, height: 30 }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.DROPDOWN_BUTTON}
               name="Dropdown Button"
               icon={<ChevronDown size={16} />}
               properties={{ text: "Select Option", options: ["Option 1", "Option 2", "Option 3"] }}
-            />
-            <ComponentItem
-              type={COMPONENT_TYPES.SELECT}
-              name="Select"
-              icon={<ChevronDown size={16} />}
-              properties={{ label: "Select", options: ["Option 1", "Option 2", "Option 3"], value: "Option 1" }}
-            />
-          </TabsContent>
-          <TabsContent value="navigation" className="p-3 space-y-2">
-            <ComponentItem
-              type={COMPONENT_TYPES.APP_BAR}
-              name="App Bar"
-              icon={<Menu size={16} />}
-              properties={{ title: "App Title", showBackButton: false, actions: [] }}
             />
           </TabsContent>
         </ScrollArea>

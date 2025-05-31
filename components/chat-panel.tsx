@@ -11,6 +11,7 @@ import { sendMessageGemini } from "@/lib/gemini"
 import { extractJsonBlock, isValidComponentNode } from "@/lib/utils"
 import { toast } from "sonner"
 import { ComponentNode } from "@/lib/types"
+import { useDesignerStore } from "@/lib/store"
 
 type Message = {
   id: string
@@ -30,6 +31,7 @@ export default function ChatPanel() {
   ])
   const [input, setInput] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { updateComponent, getSelectedComponent } = useDesignerStore()
 
   useEffect(() => {
     scrollToBottom()
@@ -39,7 +41,7 @@ export default function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!input.trim()) return
 
     // Add user message
@@ -51,29 +53,35 @@ export default function ChatPanel() {
     }
     setMessages((prev) => [...prev, userMessage])
     setInput("")
-    const assistantMessage: Message = {
-      id: Date.now().toString(),
-      text: input,
-      sender: "assistant",
-      timestamp: new Date(),
-    }
-
-    // Simulate assistant response
-    
+    await updateComponentAssistant(input);
   }
 
-  const getComponentAssistant = async (userPrompt: string) => {
+  const updateComponentAssistant = async (userPrompt: string) => {
     try {
-      const assistantMessage = await sendMessageGemini(userPrompt);
+      const selectedComponentString = JSON.stringify(getSelectedComponent());
+      const assistantMessage = await sendMessageGemini(userPrompt, selectedComponentString);
       if (!assistantMessage) {
         toast.warning("No se recibió respuesta del asistente.");
-        return null;
+        return;
+      }
+
+      if (!assistantMessage.trim().startsWith("```json")) {
+        const message: Message = {
+          id: Date.now().toString(),
+          text: assistantMessage,
+          sender: "assistant",
+          timestamp: new Date(),
+        }
+
+        setMessages((prev) => [...prev, message]);
       }
 
       const jsonText = extractJsonBlock(assistantMessage);
+
+      console.log(jsonText)
       if (!jsonText) {
         toast.warning("No se encontró un bloque JSON válido en la respuesta.");
-        return null;
+        return;
       }
 
       let parsed;
@@ -81,21 +89,20 @@ export default function ChatPanel() {
         parsed = JSON.parse(jsonText);
       } catch (err) {
         toast.error("El bloque JSON no es válido.");
-        return null;
+        return;
       }
 
       if (!isValidComponentNode(parsed)) {
         toast.error("La estructura del JSON no coincide con un componente válido.");
-        return null;
+        return;
       }
 
       toast.success("Componente actualizado exitosamente.");
-      return parsed as ComponentNode;
+      updateComponent(parsed as ComponentNode);
 
     } catch (error) {
       toast.error("Ocurrió un error inesperado al procesar la respuesta.");
       console.error("Error:", error);
-      return null;
     }
   };
 
@@ -117,8 +124,8 @@ export default function ChatPanel() {
             <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
               <div
                 className={`flex max-w-[80%] ${message.sender === "user"
-                    ? "bg-blue-500 text-white rounded-tl-lg rounded-tr-lg rounded-bl-lg"
-                    : "bg-gray-100 text-gray-800 rounded-tl-lg rounded-tr-lg rounded-br-lg"
+                  ? "bg-blue-500 text-white rounded-tl-lg rounded-tr-lg rounded-bl-lg"
+                  : "bg-gray-100 text-gray-800 rounded-tl-lg rounded-tr-lg rounded-br-lg"
                   } p-3`}
               >
                 <div className="mr-2 mt-1">

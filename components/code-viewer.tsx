@@ -1,5 +1,6 @@
 "use client";
 
+import JSZip from "jszip";
 import { useState, useEffect } from "react";
 import { useDesignerStore } from "@/lib/store";
 import { exportFlutterCodeTest } from "@/lib/code-generator";
@@ -49,6 +50,45 @@ export default function CodeViewer() {
       description: "Flutter code has been exported successfully.",
     });
   };
+
+  const handleExportCodeAndZip = async () => {
+    const zip = new JSZip();
+
+    // 1. Obtener el archivo desde public
+    const response = await fetch('/flutter_creator.bat'); // ruta del archivo en public
+    if (!response.ok) {
+      console.error('No se pudo descargar el archivo público');
+      return;
+    }
+    const publicFileBlob = await response.blob();
+
+    // Añadir archivo público al zip
+    zip.file("flutter_creator.bat", publicFileBlob);
+
+    // 2. Crear el nuevo archivo (como tu código Dart)
+    const codeBlob = new Blob([code], { type: "text/plain" });
+    zip.file(`main.dart`, codeBlob);
+
+    // 3. Generar el zip y crear URL para descargar
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(zipBlob);
+
+    // 4. Crear enlace y descargar
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `flutter_${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exported",
+      description: "Files have been zipped and exported successfully.",
+    });
+  };
+
 
   const handleImportCode = async () => {
     if (!inputCode.trim()) {
@@ -165,7 +205,7 @@ export default function CodeViewer() {
                   <Clipboard className="h-4 w-4 mr-1" />
                   Copy
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleExportCode}>
+                <Button variant="outline" size="sm" onClick={handleExportCodeAndZip}>
                   <Download className="h-4 w-4 mr-1" />
                   Export
                 </Button>

@@ -20,11 +20,12 @@ export default function PhonePreview() {
   const [device, setDevice] = useState(DEVICES[0])
   const [showFrame, setShowFrame] = useState(true)
   const [showGrid, setShowGrid] = useState(false)
-  const [zoom, setZoom] = useState(100)
+  const [zoom, setZoom] = useState(80)
   const previewRef = useRef<HTMLDivElement>(null)
 
   const { componentTree, addComponent, selectedComponentId, selectComponent, moveComponent } = useDesignerStore()
 
+  console.log("Estructura: ", componentTree);
 
   const [{ isOver }, drop] = useDrop(() => ({
     accept: ["COMPONENT", "DRAGGABLE_COMPONENT"],
@@ -42,7 +43,8 @@ export default function PhonePreview() {
           moveComponent(item.id, x, y)
         } else {
           // Add new component from palette - always add to root level for positioning
-          addComponent(item.type, { ...item.properties }, null)
+          console.log("UNITEM", item)
+          addComponent(item.type, { ...item.properties }, null, { ...item.style })
         }
       }
       return undefined

@@ -9,86 +9,7 @@ export function generateFlutterCodeTest(component: ComponentNode, indent = 0): s
     let widgetCode = "";
 
     switch (component.type) {
-        case COMPONENT_TYPES.FORM:
-            let formCode = `${spaces}Form(
-${spaces}  child: Container(
-${spaces}    padding: EdgeInsets.all(${component.properties.padding || 16}),
-${component.style?.backgroundColor ? `${spaces}    decoration: BoxDecoration(\n${spaces}      color: Color(0xFF${component.style.backgroundColor.substring(1)}),\n${component.style?.borderRadius ? `${spaces}      borderRadius: BorderRadius.circular(${component.style.borderRadius}),\n` : ""}${spaces}    ),\n` : ""}`
-
-            if (component.children.length > 0) {
-                formCode += `${spaces}    child: Column(
-${spaces}      crossAxisAlignment: CrossAxisAlignment.start,
-${spaces}      children: [`
-
-                if (component.properties.title) {
-                    formCode += `\n${spaces}        Text(
-${spaces}          '${component.properties.title.replace(/'/g, "\\'")}',
-${spaces}          style: TextStyle(
-${spaces}            fontSize: 18,
-${spaces}            fontWeight: FontWeight.bold,
-${spaces}          ),
-${spaces}        ),
-${spaces}        SizedBox(height: 16),`
-                }
-
-                formCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 8)).join(",\n")}`
-
-                formCode += `,\n${spaces}        SizedBox(height: 16),
-${spaces}        Row(
-${spaces}          mainAxisAlignment: MainAxisAlignment.end,
-${spaces}          children: [
-${spaces}            TextButton(
-${spaces}              onPressed: () {},
-${spaces}              child: Text('Cancel'),
-${spaces}            ),
-${spaces}            SizedBox(width: 8),
-${spaces}            ElevatedButton(
-${spaces}              onPressed: () {},
-${spaces}              child: Text('Submit'),
-${spaces}            ),
-${spaces}          ],
-${spaces}        ),
-${spaces}      ],
-${spaces}    ),`
-            }
-
-            formCode += `\n${spaces}  ),
-${spaces})`
-            widgetCode = formCode
-            break;
-        case COMPONENT_TYPES.INPUT:
-            widgetCode = `${spaces}Column(
-${spaces}  crossAxisAlignment: CrossAxisAlignment.start,
-${spaces}  children: [
-${spaces}    Text(
-${spaces}      '${(component.properties.label || "Label").replace(/'/g, "\\'")}${component.properties.required ? " *" : ""}',
-${spaces}      style: TextStyle(
-${spaces}        fontSize: 14,
-${component.properties.required ? `${spaces}        fontWeight: FontWeight.bold,\n` : ""}${spaces}      ),
-${spaces}    ),
-${spaces}    SizedBox(height: 4),
-${spaces}    TextFormField(
-${spaces}      decoration: InputDecoration(
-${spaces}        hintText: '${(component.properties.placeholder || "").replace(/'/g, "\\'")}',
-${spaces}        border: OutlineInputBorder(
-${spaces}          borderRadius: BorderRadius.circular(${component.style?.borderRadius || 4}),
-${spaces}        ),
-${spaces}      ),
-${component.properties.type === "email" ? `${spaces}      keyboardType: TextInputType.emailAddress,\n` : ""}${component.properties.type === "number" ? `${spaces}      keyboardType: TextInputType.number,\n` : ""}${component.properties.type === "password" ? `${spaces}      obscureText: true,\n` : ""}${spaces}    ),
-${component.properties.helperText ? `${spaces}    SizedBox(height: 4),\n${spaces}    Text(\n${spaces}      '${component.properties.helperText.replace(/'/g, "\\'")}',\n${spaces}      style: TextStyle(\n${spaces}        fontSize: 12,\n${spaces}        color: Colors.grey[600],\n${spaces}      ),\n${spaces}    ),\n` : ""}${spaces}  ],
-${spaces})`
-            break;
-        case COMPONENT_TYPES.APP_BAR:
-            widgetCode = `${spaces}AppBar(
-${spaces}  title: Text('${(component.properties.title || "App Title").replace(/'/g, "\\'")}'),
-${component.properties.showBackButton ? `${spaces}  leading: IconButton(\n${spaces}    icon: Icon(Icons.arrow_back),\n${spaces}    onPressed: () {},\n${spaces}  ),\n` : ""}${spaces}  actions: [
-${spaces}    IconButton(
-${spaces}      icon: Icon(Icons.more_vert),
-${spaces}      onPressed: () {},
-${spaces}    ),
-${spaces}  ],
-${component.style?.backgroundColor ? `${spaces}  backgroundColor: Color(0xFF${component.style.backgroundColor.substring(1)}),\n` : ""}${spaces})`
-            break;
+ 
         case COMPONENT_TYPES.SLIDER:
             const sliderValue = component.properties.value || 50
             const sliderMin = component.properties.min || 0
@@ -116,27 +37,7 @@ ${spaces}  ],
 ${spaces}  onChanged: (value) {},
 ${spaces})`
             break;
-        case COMPONENT_TYPES.SELECT:
-            const selectOptions = component.properties.options || ["Option 1", "Option 2", "Option 3"]
-            const selectValue = component.properties.value || selectOptions[0]
-            widgetCode = `${spaces}Column(
-${spaces}  crossAxisAlignment: CrossAxisAlignment.start,
-${spaces}  children: [
-${spaces}    Text('${(component.properties.label || "Select").replace(/'/g, "\\'")}'),
-${spaces}    SizedBox(height: 8),
-${spaces}    DropdownButtonFormField<String>(
-${spaces}      value: '${selectValue.replace(/'/g, "\\'")}',
-${spaces}      decoration: InputDecoration(
-${spaces}        border: OutlineInputBorder(),
-${spaces}      ),
-${spaces}      items: [
-${selectOptions.map((option: string) => `${spaces}        DropdownMenuItem(\n${spaces}          value: '${option.replace(/'/g, "\\'")}',\n${spaces}          child: Text('${option.replace(/'/g, "\\'")}'),\n${spaces}        )`).join(",\n")}
-${spaces}      ],
-${spaces}      onChanged: (value) {},
-${spaces}    ),
-${spaces}  ],
-${spaces})`
-            break;
+       
         case COMPONENT_TYPES.TABLE:
             const rows = component.properties.rows || 3
             const columns = component.properties.columns || 3
@@ -228,40 +129,7 @@ ${spaces}  ),\n`
             containerCode += `${spaces})`
             widgetCode = containerCode
             break;
-        case COMPONENT_TYPES.ROW:
-            const mainAxisAlignment = component.properties.mainAxisAlignment || "start"
-            const crossAxisAlignment = component.properties.crossAxisAlignment || "center"
-
-            let rowCode = `${spaces}Row(
-${spaces}  mainAxisAlignment: MainAxisAlignment.${convertFlutterAlignment(mainAxisAlignment)},
-${spaces}  crossAxisAlignment: CrossAxisAlignment.${convertFlutterAlignment(crossAxisAlignment)},
-${spaces}  children: [`
-
-            if (component.children.length > 0) {
-                rowCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 4)).join(",\n")}\n${spaces}  `
-            }
-
-            rowCode += `],
-${spaces})`
-            widgetCode = rowCode
-            break;
-        case COMPONENT_TYPES.COLUMN:
-            const colMainAxisAlignment = component.properties.mainAxisAlignment || "start"
-            const colCrossAxisAlignment = component.properties.crossAxisAlignment || "center"
-
-            let columnCode = `${spaces}Column(
-${spaces}  mainAxisAlignment: MainAxisAlignment.${convertFlutterAlignment(colMainAxisAlignment)},
-${spaces}  crossAxisAlignment: CrossAxisAlignment.${convertFlutterAlignment(colCrossAxisAlignment)},
-${spaces}  children: [`
-
-            if (component.children.length > 0) {
-                columnCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 4)).join(",\n")}\n${spaces}  `
-            }
-
-            columnCode += `],
-${spaces})`
-            widgetCode = columnCode
-            break;
+        
         case COMPONENT_TYPES.STACK:
             let stackCode = `${spaces}Stack(
 ${spaces}  alignment: Alignment.${component.properties.alignment || "center"},
@@ -310,8 +178,7 @@ ${spaces})`
         case COMPONENT_TYPES.TEXT_FIELD:
             widgetCode = `${spaces}TextField(
 ${spaces}  decoration: InputDecoration(
-${spaces}    labelText: '${(component.properties.label || "Label").replace(/'/g, "\\'")}',
-${spaces}    hintText: '${(component.properties.hint || "").replace(/'/g, "\\'")}',
+${spaces}    labelText: '${(component.properties.hint || "Label").replace(/'/g, "\\'")}',
 ${spaces}    border: OutlineInputBorder(
 ${spaces}      borderRadius: BorderRadius.circular(${component.style?.borderRadius || 4}),
 ${spaces}    ),
@@ -400,7 +267,12 @@ ${spaces})`
 ${posSpaces}  left: ${Math.trunc(x)},
 ${posSpaces}  top: ${Math.trunc(y)},
 ${posSpaces}  child: \
+SizedBox(
+                    width: ${component.style?.width || "30"},
+                    height: ${component.style?.height || "30"},
+                    child:   
 ${widgetCode.trim().split("\n").map(line => `${posSpaces}    ${line.trim()}`).join("\n")},
+    )
 ${posSpaces})`;
     }
 
@@ -415,85 +287,6 @@ export function generateFlutterCode(component: ComponentNode, indent = 0): strin
   let widgetCode = "";
 
   switch (component.type) {
-    case COMPONENT_TYPES.FORM:
-      let formCode = `${spaces}Form(
-${spaces}  child: Container(
-${spaces}    padding: EdgeInsets.all(${component.properties.padding || 16}),
-${component.style?.backgroundColor ? `${spaces}    decoration: BoxDecoration(\n${spaces}      color: Color(0xFF${component.style.backgroundColor.substring(1)}),\n${component.style?.borderRadius ? `${spaces}      borderRadius: BorderRadius.circular(${component.style.borderRadius}),\n` : ""}${spaces}    ),\n` : ""}`
-
-      if (component.children.length > 0) {
-        formCode += `${spaces}    child: Column(
-${spaces}      crossAxisAlignment: CrossAxisAlignment.start,
-${spaces}      children: [`
-
-        if (component.properties.title) {
-          formCode += `\n${spaces}        Text(
-${spaces}          '${component.properties.title.replace(/'/g, "\\'")}',
-${spaces}          style: TextStyle(
-${spaces}            fontSize: 18,
-${spaces}            fontWeight: FontWeight.bold,
-${spaces}          ),
-${spaces}        ),
-${spaces}        SizedBox(height: 16),`
-        }
-
-        formCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 8)).join(",\n")}`
-
-        formCode += `,\n${spaces}        SizedBox(height: 16),
-${spaces}        Row(
-${spaces}          mainAxisAlignment: MainAxisAlignment.end,
-${spaces}          children: [
-${spaces}            TextButton(
-${spaces}              onPressed: () {},
-${spaces}              child: Text('Cancel'),
-${spaces}            ),
-${spaces}            SizedBox(width: 8),
-${spaces}            ElevatedButton(
-${spaces}              onPressed: () {},
-${spaces}              child: Text('Submit'),
-${spaces}            ),
-${spaces}          ],
-${spaces}        ),
-${spaces}      ],
-${spaces}    ),`
-      }
-
-      formCode += `\n${spaces}  ),
-${spaces})`
-      return formCode
-
-    case COMPONENT_TYPES.INPUT:
-      return `${spaces}Column(
-${spaces}  crossAxisAlignment: CrossAxisAlignment.start,
-${spaces}  children: [
-${spaces}    Text(
-${spaces}      '${(component.properties.label || "Label").replace(/'/g, "\\'")}${component.properties.required ? " *" : ""}',
-${spaces}      style: TextStyle(
-${spaces}        fontSize: 14,
-${component.properties.required ? `${spaces}        fontWeight: FontWeight.bold,\n` : ""}${spaces}      ),
-${spaces}    ),
-${spaces}    SizedBox(height: 4),
-${spaces}    TextFormField(
-${spaces}      decoration: InputDecoration(
-${spaces}        hintText: '${(component.properties.placeholder || "").replace(/'/g, "\\'")}',
-${spaces}        border: OutlineInputBorder(
-${spaces}          borderRadius: BorderRadius.circular(${component.style?.borderRadius || 4}),
-${spaces}        ),
-${spaces}      ),
-${component.properties.type === "email" ? `${spaces}      keyboardType: TextInputType.emailAddress,\n` : ""}${component.properties.type === "number" ? `${spaces}      keyboardType: TextInputType.number,\n` : ""}${component.properties.type === "password" ? `${spaces}      obscureText: true,\n` : ""}${spaces}    ),
-${component.properties.helperText ? `${spaces}    SizedBox(height: 4),\n${spaces}    Text(\n${spaces}      '${component.properties.helperText.replace(/'/g, "\\'")}',\n${spaces}      style: TextStyle(\n${spaces}        fontSize: 12,\n${spaces}        color: Colors.grey[600],\n${spaces}      ),\n${spaces}    ),\n` : ""}${spaces}  ],
-${spaces})`
-
-    case COMPONENT_TYPES.APP_BAR:
-      return `${spaces}AppBar(
-${spaces}  title: Text('${(component.properties.title || "App Title").replace(/'/g, "\\'")}'),
-${component.properties.showBackButton ? `${spaces}  leading: IconButton(\n${spaces}    icon: Icon(Icons.arrow_back),\n${spaces}    onPressed: () {},\n${spaces}  ),\n` : ""}${spaces}  actions: [
-${spaces}    IconButton(
-${spaces}      icon: Icon(Icons.more_vert),
-${spaces}      onPressed: () {},
-${spaces}    ),
-${spaces}  ],
-${component.style?.backgroundColor ? `${spaces}  backgroundColor: Color(0xFF${component.style.backgroundColor.substring(1)}),\n` : ""}${spaces})`
 
     case COMPONENT_TYPES.SLIDER:
       const sliderValue = component.properties.value || 50
@@ -520,27 +313,6 @@ ${spaces}  items: [
 ${dropdownOptions.map((option: string) => `${spaces}    DropdownMenuItem(\n${spaces}      value: '${option.replace(/'/g, "\\'")}',\n${spaces}      child: Text('${option.replace(/'/g, "\\'")}'),\n${spaces}    )`).join(",\n")}
 ${spaces}  ],
 ${spaces}  onChanged: (value) {},
-${spaces})`
-
-    case COMPONENT_TYPES.SELECT:
-      const selectOptions = component.properties.options || ["Option 1", "Option 2", "Option 3"]
-      const selectValue = component.properties.value || selectOptions[0]
-      return `${spaces}Column(
-${spaces}  crossAxisAlignment: CrossAxisAlignment.start,
-${spaces}  children: [
-${spaces}    Text('${(component.properties.label || "Select").replace(/'/g, "\\'")}'),
-${spaces}    SizedBox(height: 8),
-${spaces}    DropdownButtonFormField<String>(
-${spaces}      value: '${selectValue.replace(/'/g, "\\'")}',
-${spaces}      decoration: InputDecoration(
-${spaces}        border: OutlineInputBorder(),
-${spaces}      ),
-${spaces}      items: [
-${selectOptions.map((option: string) => `${spaces}        DropdownMenuItem(\n${spaces}          value: '${option.replace(/'/g, "\\'")}',\n${spaces}          child: Text('${option.replace(/'/g, "\\'")}'),\n${spaces}        )`).join(",\n")}
-${spaces}      ],
-${spaces}      onChanged: (value) {},
-${spaces}    ),
-${spaces}  ],
 ${spaces})`
 
     case COMPONENT_TYPES.TABLE:
@@ -635,39 +407,6 @@ ${spaces}  ),\n`
       containerCode += `${spaces})`
       return containerCode
 
-    case COMPONENT_TYPES.ROW:
-      const mainAxisAlignment = component.properties.mainAxisAlignment || "start"
-      const crossAxisAlignment = component.properties.crossAxisAlignment || "center"
-
-      let rowCode = `${spaces}Row(
-${spaces}  mainAxisAlignment: MainAxisAlignment.${convertFlutterAlignment(mainAxisAlignment)},
-${spaces}  crossAxisAlignment: CrossAxisAlignment.${convertFlutterAlignment(crossAxisAlignment)},
-${spaces}  children: [`
-
-      if (component.children.length > 0) {
-        rowCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 4)).join(",\n")}\n${spaces}  `
-      }
-
-      rowCode += `],
-${spaces})`
-      return rowCode
-
-    case COMPONENT_TYPES.COLUMN:
-      const colMainAxisAlignment = component.properties.mainAxisAlignment || "start"
-      const colCrossAxisAlignment = component.properties.crossAxisAlignment || "center"
-
-      let columnCode = `${spaces}Column(
-${spaces}  mainAxisAlignment: MainAxisAlignment.${convertFlutterAlignment(colMainAxisAlignment)},
-${spaces}  crossAxisAlignment: CrossAxisAlignment.${convertFlutterAlignment(colCrossAxisAlignment)},
-${spaces}  children: [`
-
-      if (component.children.length > 0) {
-        columnCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 4)).join(",\n")}\n${spaces}  `
-      }
-
-      columnCode += `],
-${spaces})`
-      return columnCode
 
     case COMPONENT_TYPES.STACK:
       let stackCode = `${spaces}Stack(
@@ -822,6 +561,7 @@ function convertFlutterAlignment(alignment: string): string {
 }
 
 // Generate the full Flutter code for the app with proper structure
+/** NO SE ESTA USANDO ESTA FUNCION */
 export function exportFlutterCode(componentTree: ComponentNode): string {
   const imports = `import 'package:flutter/material.dart';\n\n`
 

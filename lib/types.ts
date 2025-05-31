@@ -3,8 +3,17 @@ export interface ComponentNode {
   type: string
   properties: Record<string, any>
   children: ComponentNode[]
-  style?: Record<string, any>
+  style?: Style
   position?: { x: number; y: number }
+}
+
+export interface Style {
+  fontSize: number
+  borderRadius: number
+  color: string
+  backgroundColor: string
+  width: number
+  height: number
 }
 
 export interface Page {
@@ -12,3 +21,4 @@ export interface Page {
   name: string
   componentTree: ComponentNode
 }
+

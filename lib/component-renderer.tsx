@@ -249,7 +249,8 @@ function DroppableContainer({
         onSelect(item.id)
       } else {
         // Add new component to this container
-        addComponent(item.type, item.properties, component.id)
+        console.log("UNITEM", item)
+        addComponent(item.type, item.properties, component.id, item.style)
       }
     },
     collect: (monitor) => ({
@@ -310,103 +311,8 @@ export function renderComponent(
   let renderedComponent: React.ReactNode
 
   switch (component.type) {
-    case COMPONENT_TYPES.FORM:
-      renderedComponent = (
-        <DroppableContainer component={component} isSelected={isSelected} onSelect={onSelect} onMove={onMove}>
-          <form
-            style={{
-              backgroundColor: component.style?.backgroundColor || "#FFFFFF",
-              borderRadius: component.style?.borderRadius || 4,
-              border: "1px solid #E0E0E0",
-              ...component.style,
-              padding: 0, // Remove padding since DroppableContainer handles it
-            }}
-            onSubmit={(e) => e.preventDefault()}
-          >
-            {component.properties.title && (
-              <div style={{ marginBottom: 16, fontWeight: "bold", fontSize: 18 }}>{component.properties.title}</div>
-            )}
-            <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button
-                type="button"
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: "#F5F5F5",
-                  border: "1px solid #CCCCCC",
-                  borderRadius: 4,
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: "#2196F3",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: 4,
-                }}
-              >
-                Submit
-              </button>
-            </div>
-          </form>
-        </DroppableContainer>
-      )
-      break
 
-    case COMPONENT_TYPES.INPUT:
-      renderedComponent = (
-        <div style={{ ...component.style }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: 4,
-              fontSize: 14,
-              fontWeight: component.properties.required ? "bold" : "normal",
-            }}
-          >
-            {component.properties.label || "Label"}
-            {component.properties.required && <span style={{ color: "red" }}> *</span>}
-          </label>
-          <input
-            type={component.properties.type || "text"}
-            placeholder={component.properties.placeholder || ""}
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: component.style?.borderRadius || 4,
-              border: "1px solid #CCCCCC",
-              fontSize: component.style?.fontSize || 16,
-            }}
-          />
-          {component.properties.helperText && (
-            <div style={{ marginTop: 4, fontSize: 12, color: "#666666" }}>{component.properties.helperText}</div>
-          )}
-        </div>
-      )
-      break
 
-    case COMPONENT_TYPES.APP_BAR:
-      renderedComponent = (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "12px 16px",
-            backgroundColor: "#2196F3",
-            color: "#FFFFFF",
-            height: 56,
-            ...component.style,
-          }}
-        >
-          {component.properties.showBackButton && <ArrowLeft className="h-6 w-6 mr-4" />}
-          <h1 style={{ fontSize: 20, fontWeight: "500", flex: 1 }}>{component.properties.title || "App Title"}</h1>
-          <MoreVertical className="h-6 w-6" />
-        </div>
-      )
-      break
 
     case COMPONENT_TYPES.SLIDER:
       renderedComponent = <SliderComponent component={component} onSelect={onSelect} />
@@ -416,9 +322,6 @@ export function renderComponent(
       renderedComponent = <DropdownButtonComponent component={component} onSelect={onSelect} />
       break
 
-    case COMPONENT_TYPES.SELECT:
-      renderedComponent = <SelectComponent component={component} onSelect={onSelect} />
-      break
 
     case COMPONENT_TYPES.TABLE:
       const rows = component.properties.rows || 3
@@ -475,7 +378,7 @@ export function renderComponent(
                     fontSize: 14,
                   }}
                 >
-                  Row {rowIndex + 1}, Col {colIndex + 1}
+                  Row {rowIndex + 1}
                 </div>
               ))}
             </div>
@@ -565,40 +468,6 @@ export function renderComponent(
       )
       break
 
-    case COMPONENT_TYPES.ROW:
-      renderedComponent = (
-        <DroppableContainer component={component} isSelected={isSelected} onSelect={onSelect} onMove={onMove}>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: getFlexAlignment(component.properties.mainAxisAlignment),
-              alignItems: getFlexAlignment(component.properties.crossAxisAlignment),
-              ...component.style,
-              padding: 0, // Remove padding since DroppableContainer handles it
-            }}
-          />
-        </DroppableContainer>
-      )
-      break
-
-    case COMPONENT_TYPES.COLUMN:
-      renderedComponent = (
-        <DroppableContainer component={component} isSelected={isSelected} onSelect={onSelect} onMove={onMove}>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: getFlexAlignment(component.properties.mainAxisAlignment),
-              alignItems: getFlexAlignment(component.properties.crossAxisAlignment),
-              ...component.style,
-              padding: 0, // Remove padding since DroppableContainer handles it
-            }}
-          />
-        </DroppableContainer>
-      )
-      break
-
     case COMPONENT_TYPES.STACK:
       renderedComponent = (
         <DroppableContainer component={component} isSelected={isSelected} onSelect={onSelect} onMove={onMove}>
@@ -635,7 +504,6 @@ export function renderComponent(
     case COMPONENT_TYPES.TEXT_FIELD:
       renderedComponent = (
         <div>
-          <div style={{ marginBottom: 4, fontSize: 14 }}>{component.properties.label || "Label"}</div>
           <input
             type="text"
             placeholder={component.properties.hint || ""}

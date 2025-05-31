@@ -24,8 +24,9 @@ interface DesignerState {
   getCurrentPage: () => Page | undefined
 
   // Component actions
-  addComponent: (type: string, properties: Record<string, any>, parentId: string | null) => void
+  addComponent: (type: string, properties: Record<string, any>, parentId: string | null, style: Record<string, any>) => void
   updateComponentProperty: (id: string, property: string, value: any) => void
+  updateComponent:(componentNode: ComponentNode) => void
   deleteComponent: (id: string) => void
   selectComponent: (id: string | null) => void
   getSelectedComponent: () => ComponentNode | null
@@ -224,14 +225,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
   },
 
   // Add a component to the tree
-  addComponent: (type, properties, parentId) => {
-    
-    const defaultStyle = {
-      fontSize: 16,
-      borderRadius: 5,
-      color: "#eb0000",
-      backgroundColor: "#000000"
-    }
+  addComponent: (type, properties, parentId, style) => {
 
 
     set((state) => {
@@ -241,7 +235,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
         type,
         properties,
         children: [],
-        style: defaultStyle,
+        style: style,
         position: { x: 0, y: 0 },
       }
 
@@ -318,6 +312,35 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       return { componentTree: newTree }
     })
   },
+
+  updateComponent: (componentNode) => {
+    set((state) => {
+      const newTree = JSON.parse(JSON.stringify(state.componentTree));
+
+      const updateNode = (node: ComponentNode): boolean => {
+        if (node.id === componentNode.id) {
+          Object.assign(node, componentNode);
+          return true;
+        }
+
+        for (const child of node.children) {
+          if (updateNode(child)) {
+            return true;
+          }
+        }
+
+        return false;
+      };
+
+      updateNode(newTree);
+
+      // Guardar en historial
+      setTimeout(() => get().saveToHistory(), 0);
+
+      return { componentTree: newTree };
+    });
+  },
+
 
   // Move a component
   moveComponent: (id, x, y) => {
