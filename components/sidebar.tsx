@@ -10,7 +10,7 @@ export default function Sidebar() {
   const [activeTab, setActiveTab] = useState("palette")
 
   return (
-    <div className="w-64 border-r bg-white flex flex-col h-full">
+    <div className="w-64 border-r bg-[#0a0f14] flex flex-col h-full">
       <Tabs defaultValue="palette" className="flex flex-col h-full">
         <TabsList className="w-full justify-start px-3 pt-2 border-b">
           <TabsTrigger value="palette" onClick={() => setActiveTab("palette")}>

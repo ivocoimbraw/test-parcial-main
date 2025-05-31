@@ -27,7 +27,7 @@ export default function PropertyPanel() {
   console.log("selectected component: ", selectedComponent);
   if (!selectedComponent) {
     return (
-      <div className="w-64 border-l bg-white p-4 flex flex-col items-center justify-center text-gray-400">
+      <div className="w-64 border-l bg-[#0a0f14] p-4 flex flex-col items-center justify-center text-gray-400">
         <Move className="w-12 h-12 mb-2 opacity-20" />
         <p className="text-sm text-center">Select a component to edit its properties</p>
       </div>
@@ -92,7 +92,7 @@ export default function PropertyPanel() {
   }
 
   return (
-    <div className="w-64 border-l bg-white flex flex-col">
+    <div className="w-64 border-l bg-[#0a0f14] flex flex-col">
       <div className="p-3 border-b flex items-center justify-between">
         <h3 className="font-medium">Properties</h3>
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500" onClick={handleDelete}>

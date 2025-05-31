@@ -65,7 +65,7 @@ export default function PhonePreview() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between p-2 border-b bg-gray-50">
+      <div className="flex items-center justify-between p-2 border-b bg-[#0a0f14]">
         <div className="flex items-center gap-2">
           <Select value={device.id} onValueChange={handleDeviceChange}>
             <SelectTrigger className="w-[180px]">
@@ -93,7 +93,7 @@ export default function PhonePreview() {
           <span className="text-xs text-gray-500">{zoom}%</span>
         </div>
       </div>
-      <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-100 p-4">
+      <div className="flex-1 overflow-auto flex items-center justify-center bg-[#0a0f14] p-4">
         <div
           ref={drop}
           className={`relative ${showFrame ? "border-8 border-gray-800 rounded-3xl" : ""}`}

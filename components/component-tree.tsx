@@ -348,10 +348,10 @@ export default function ComponentTree() {
   const totalComponents = componentTree.children.reduce((sum, child) => sum + getTotalComponents(child), 0)
 
   return (
-    <div className="h-full border-t bg-white flex flex-col">
+    <div className="h-full border-t bg-[#0a0f14] flex flex-col">
       <div className="p-2 border-b flex items-center justify-between">
         <h3 className="text-sm font-medium">Component Tree</h3>
-        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{totalComponents} components</span>
+        <span className="text-xs text-gray-500 bg-[#0a0f14] px-2 py-1 rounded">{totalComponents} components</span>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2">

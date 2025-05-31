@@ -84,7 +84,7 @@ export default function AppLayout() {
 
         {/* Main Content */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex items-center justify-between p-2 border-b bg-gray-50">
+          <div className="flex items-center justify-between p-2 border-b bg-background">
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={undo} disabled={!canUndo}>
                 <Undo className="w-4 h-4 mr-1" />
@@ -117,7 +117,7 @@ export default function AppLayout() {
             </div>
           </div>
 
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden bg-[#0a0f14]">
             <div className="flex flex-col flex-1">
               {codeViewOpen ? <CodeViewer /> : chatOpen ? <ChatPanel /> : <PhonePreview />}
             </div>

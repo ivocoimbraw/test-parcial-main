@@ -170,7 +170,7 @@ export default function CodeViewer() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+        <div className="flex items-center justify-between p-3 border-b bg-[#0a0f14]">
           <div className="flex items-center gap-4">
             <TabsList>
               <TabsTrigger value="view" className="flex items-center gap-2">
