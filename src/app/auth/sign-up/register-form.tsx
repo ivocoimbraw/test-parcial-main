@@ -5,45 +5,118 @@ import { Button } from "@/components/ui/sh-button";
 import { Card, CardContent } from "@/components/ui/sh-card";
 import { Input } from "@/components/ui/sh-input";
 import { Label } from "@/components/ui/sh-label";
-
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { Eye, EyeOff } from "lucide-react";
 import { useAuthStore } from "@/lib/useAuthStore";
+import { API_ROUTES } from "../../../routes/api.routes";
+import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import { toast } from "sonner";
 
-function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
+export function SignUpForm({ className, ...props }: React.ComponentProps<"div">) {
   const router = useRouter();
-
-  const { login, loading, error } = useAuthStore();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const login = useAuthStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
+
+  const [data, setData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setData({ ...data, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(data);
+    try {
+      const response = await fetch(API_ROUTES.SIGN_UP.url, {
+        method: API_ROUTES.SIGN_UP.method,
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
 
-    const shareId = "43829e0c-c0b9-4f0f-b6d3-f8a7f5f2f4d4";
-    router.push(`/grapesjs/${shareId}`);
+      if (!response.ok) {
+        const err = await response.json();
+        toast(err.detail || "Error al registrarse");
+        return;
+      }
+
+      await login(data.email, data.password);
+
+      const { user, error } = useAuthStore.getState();
+      let token = null;
+      if (typeof window !== "undefined") {
+        token = localStorage.getItem("token");
+      }
+
+      //   if (user && !error && token) {
+      //     const projectResponse = await fetch(API_ROUTES.PROJECT_CREATE.url, {
+      //       method: API_ROUTES.PROJECT_CREATE.method,
+      //       headers: {
+      //         "content-type": "application/json",
+      //         Authorization: `Bearer ${token}`,
+      //       },
+      //       body: JSON.stringify({
+      //         name: `Proyecto de ${user.name}`,
+      //       }),
+      //     });
+
+      //     const projectData = await projectResponse.json();
+
+      //     if (projectResponse.ok && projectData.shareId) {
+      //       toast("Successful Register ", {
+      //         description: "Now you can start collaborating with your teammates.",
+      //       });
+      //       router.push(`/grapesjs/${projectData.shareId}`);
+      //     } else {
+      //       toast("Error register", {
+      //         description: "Please try again later.",
+      //       });
+      //     }
+      //   }
+    } catch (err) {
+      console.error("Error:", err);
+      toast("Error ", {
+        description: "Please try again later.",
+      });
+    }
   };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8" onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="p-6 md:p-8">
             <div className="flex flex-col gap-6">
               <div className="flex flex-col items-center text-center">
-                <h1 className="text-2xl font-bold">Sign In</h1>
-                <p className="text-muted-foreground text-balance">Login to your Asocial account</p>
+                <h1 className="text-2xl font-bold">Welcome</h1>
+                <p className="text-muted-foreground text-balance">Create your account</p>
+              </div>
+              <div className="grid gap-3">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  name="name"
+                  value={data.name}
+                  onChange={handleChange}
+                  placeholder="User Name"
+                  required
+                />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
+                  name="email"
+                  value={data.email}
+                  onChange={handleChange}
                   placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -55,8 +128,9 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    name="password"
+                    value={data.password}
+                    onChange={handleChange}
                     required
                     className="pr-10"
                   />
@@ -69,17 +143,12 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
                   </button>
                 </div>
               </div>
-
-              {error && <p className="text-sm text-red-500"></p>}
-
               <Button
                 type="submit"
-                disabled={loading}
                 className="w-full bg-gradient-to-r from-cyan-700 to-blue-600 hover:from-cyan-600 hover:to-blue-500 text-white font-semibold rounded-md shadow-md transition-all duration-300"
               >
-                {loading ? "Logging in..." : "Login"}
+                Sign UP
               </Button>
-
               <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
                 <span className="bg-card text-muted-foreground relative z-10 px-2">Or continue with</span>
               </div>
@@ -96,8 +165,8 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
               </div>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
-                <a href="/auth/sign-up" className="underline underline-offset-4">
-                  Sign up
+                <a href="/auth/sign-in" className="underline underline-offset-4">
+                  Sign in
                 </a>
               </div>
             </div>
@@ -116,5 +185,3 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
     </div>
   );
 }
-
-export default LoginForm;

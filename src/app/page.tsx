@@ -89,8 +89,7 @@ export default function Home() {
   }, []);
   const handleSignIn = () => {
     console.log("Signing in...");
-    // router.push("/auth/sign-in");
-    router.push("/editor-desing");
+    router.push("/auth/sign-in");
   };
 
   const handleSignUp = () => {
