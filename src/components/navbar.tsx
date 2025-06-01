@@ -1,9 +1,10 @@
 import React from "react";
+import { TabsGenerator } from "./tobs-generator";
 
 const Navbar = () => {
   const navItems = [
     { name: "Exportar", href: "#" },
-    { name: "Genetar", href: "#" },
+    { name: "Generador", href: "#" },
     { name: "Compartir", href: "#" },
   ];
 
@@ -21,7 +22,7 @@ const Navbar = () => {
           </div>
 
           {/* Navigation - Siempre visible */}
-          <div className="flex items-center space-x-8">
+          {/* <div className="flex items-center space-x-8">
             {navItems.map((item) => (
               <div key={item.name} className="relative group">
                 <a
@@ -32,12 +33,18 @@ const Navbar = () => {
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-500 group-hover:w-full transition-all duration-300"></span>
                 </a>
               </div>
-            ))}
+            ))} */}
 
-            {/* CTA Button integrado */}
-            <button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 ml-4">
+          {/* CTA Button integrado */}
+          {/* <button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 ml-4">
               Comenzar
             </button>
+          </div> */}
+
+          <div className="flex justify-between items-center relative z-20">
+            <div className="flex items-center gap-3">
+              <TabsGenerator />
+            </div>
           </div>
         </div>
       </div>

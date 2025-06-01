@@ -113,28 +113,35 @@ export default function ChatPanel() {
   };
 
   return (
-    <div className="flex flex-col max-h-[390px] border rounded-md m-2 bg-white">
-      <div className="p-3 border-b">
-        <h3 className="font-medium">Flutter Design Assistant</h3>
+    <div className="flex flex-col max-h-[390px] m-2 bg-black/20 backdrop-blur-md border border-white/10 rounded-md">
+      <div className="p-3 border-b border-white/10">
+        <h3 className="font-medium text-cyan-100">Flutter Design Assistant</h3>
       </div>
-      <ScrollArea className="flex-1 p-4 overflow-y-visible">
+      <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
               <div
                 className={`flex max-w-[80%] ${
                   message.sender === "user"
-                    ? "bg-blue-500 text-white rounded-tl-lg rounded-tr-lg rounded-bl-lg"
-                    : "bg-gray-100 text-gray-800 rounded-tl-lg rounded-tr-lg rounded-br-lg"
+                    ? "bg-cyan-600 text-white rounded-tl-lg rounded-tr-lg rounded-bl-lg"
+                    : "bg-white/10 text-cyan-100 rounded-tl-lg rounded-tr-lg rounded-br-lg"
                 } p-3`}
               >
                 <div className="mr-2 mt-1">
-                  {message.sender === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                  {message.sender === "user" ? (
+                    <User className="h-4 w-4 text-white" />
+                  ) : (
+                    <Bot className="h-4 w-4 text-cyan-100" />
+                  )}
                 </div>
                 <div>
                   <p className="text-sm">{message.text}</p>
                   <p className="text-xs opacity-70 mt-1">
-                    {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {message.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 </div>
               </div>
@@ -143,15 +150,19 @@ export default function ChatPanel() {
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
-      <div className="p-3 border-t flex">
+      <div className="p-3 border-t border-white/10 flex">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          className="flex-1"
+          placeholder="Escribe tu mensaje..."
+          className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-cyan-100 placeholder:text-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
         />
-        <Button className="ml-2" onClick={handleSendMessage} disabled={!input.trim()}>
+        <Button
+          className="ml-2 bg-cyan-600 hover:bg-cyan-700 text-white disabled:opacity-50 transition"
+          onClick={handleSendMessage}
+          disabled={!input.trim()}
+        >
           <Send className="h-4 w-4" />
         </Button>
       </div>
