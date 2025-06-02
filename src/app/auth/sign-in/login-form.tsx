@@ -21,10 +21,27 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await login(email, password);
+    const { user, error } = useAuthStore.getState();
+    let token = null;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("token");
+    }
 
-    const shareId = "43829e0c-c0b9-4f0f-b6d3-f8a7f5f2f4d4";
-    router.push(`/grapesjs/${shareId}`);
-  };
+
+      if (user && !error && token) {
+        // toast("Successful Login ", {
+        //   description: "Now you can start collaborating with your teammates.",
+        // });
+           router.push(`/editor-desing`);
+      } else {
+        // toast("Error login", {
+        //   descrption: "Please try again later.",
+        // });
+      }
+  }
+
+
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>

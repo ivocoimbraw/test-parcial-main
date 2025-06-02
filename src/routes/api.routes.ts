@@ -9,4 +9,8 @@ export const API_ROUTES = {
     url: `${API_URL}/auth/login`,
     method: "POST",
   },
+  GEMINI_API: {
+    url: `${API_URL}/api/gemini/chat`,
+    method: "POST",
+  }
 };

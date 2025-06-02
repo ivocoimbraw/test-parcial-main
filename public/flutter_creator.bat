@@ -24,10 +24,6 @@ IF NOT EXIST "main.dart" (
 :: Ir al proyecto
 cd %PROJECT_NAME%
 
-:: Agregar dependencia de Google Fonts
-echo === AGREGANDO DEPENDENCIA: google_fonts ===
-call flutter pub add google_fonts
-
 :: Regresar al directorio original
 cd ..
 

@@ -1,6 +1,8 @@
+import { API_ROUTES } from "@/routes/api.routes";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: "AIzaSyBZ6SHRSHg61dRNqx68FgCi4aRZwSWGoe4" });
+
+const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_API_KEY_GEMINI });
 
 
 
@@ -16,6 +18,38 @@ export async function sendMessageGemini(prompt: string, selectComponent: string)
   return response.text;
 }
 
+export async function sendMessageGeminiPage(prompt: string):Promise<string | undefined> {
+  const response = await ai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: prompt, 
+    config: {
+      systemInstruction: PROMPT_PAGE,
+    },
+  });
+  console.log(response.text);
+  return response.text;
+}
+
+export async function sendBocetoGemini(imageFile: File | null): Promise<string> {
+  if (!imageFile) {
+    throw new Error("La imagen no puede ser nula");
+  }
+
+  const formData = new FormData();
+  formData.append("image", imageFile);
+
+  const response = await fetch(API_ROUTES.GEMINI_API.url, {
+    method: API_ROUTES.GEMINI_API.method,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error del servidor: ${response.status}`);
+  }
+
+  const result = await response.text();
+  return result;
+}
 
 
 const STYLES_ASSISTANT = `
@@ -77,113 +111,124 @@ Respuesta:
 "Lo siento, no puedo ayudarte con eso. Solo puedo modificar propiedades como el texto o estilos como colores, tamaño de fuente, márgenes, bordes, etc."
 `
 
-const BOCETO_ASSISTANT =
-`
-Eres un asistente que genera un JSON basado en la estructura y contenido de una imagen, siguiendo estrictamente este esquema:
-interface ComponentNode {
-id: string; // UUID
-type: "text" | "button" | "textField";
-properties: Record<string, any>;
-children: ComponentNode[];
-style?: Style;
-position?: { x: number; y: number };
-}
-interface Style {
-fontSize: number;
-borderRadius: number;
-color: string; // formato hexadecimal, e.g. "#000000"
-backgroundColor: string; // formato hexadecimal
-width: number;
-height: number;
-}
-Tipos permitidos para type:
-const COMPONENT_TYPES = {
-TEXT: "text",
-BUTTON: "button",
-TEXT_FIELD: "textField",
-};
-Ejemplos de properties según type:
-Texto (text): { "text": "Texto" }
-Botón (button): { "text": "Botón", "variant": "primary" }
-Campo de texto (textField): {"hint": "Texto de ayuda" }
-Ejemplo de salida JSON:
-{
-"id": "d45222d2-cba9-4423-b7f3-8d56cd10ed85",
-"type": "text",
-"properties": {
-"text": "Text,
-},
-"children": [],
-"style": {
-"fontSize": 16,
-"borderRadius": 5,
-"color": "#000000",
-"backgroundColor": "#ffffff",
-"width": 35,
-"height": 30
-},
-"position": {
-"x": 0,
-"y": 0
-}
-}
-Instrucciones importantes:
-Siempre genera única y exclusivamente un JSON válido con esta estructura.
-El campo id debe ser un UUID válido.
-Usa solo los tipos indicados en COMPONENT_TYPES.
-Los valores de color deben estar en formato hexadecimal.
-children es un arreglo que puede contener otros nodos con la misma estructura.
-No agregues texto, explicaciones ni formatos adicionales en la respuesta, solo el JSON.Cada componente debe de tener position
-Cada componente este separado, no este dentro de un children o un contenedor que sean invudual
-`
 
 const PAGE_ASSISTANT =
 `
 You are a system assistant whose sole job is to generate valid JSON pages according to the following schema:
 • ComponentNode
-id: string (use “root” for the root node; use a new UUID v4 for every other node)
-type: one of text, button, container, table, input, checkbox, select, or root
+id: string (use a new UUID v4 for every other node)
+type: one of text, button, table, input, checkbox, dropdownButton
 properties: default values depending on type (see list below)
-children: array of ComponentNode
+children: always an empty array 
 style: default {} unless overridden by type defaults
 position: object with numeric x and y
-• Page
-id: UUID v4
+id: UUID 
 name: string
-componentTree: ComponentNode
+Default style for all components:  {
+  fontSize: 16,
+  borderRadius: 5,
+  color: "#000000",
+  backgroundColor: "#ffffff",
+  width: (see list below),
+  height: (see list below)
+};
+text → width: 35, height:30
+button → width: 50, height: 30
+table → width: 300, height: 200
+textField → width: 100, height: 30
+checkbox → width: 150, height: 30
+dropdownButton → width: 155, height: 30
 Default properties by type:
-text → { text: "Text", style: { fontSize: 16 } }
+text → { text: "Text" }
 button → { text: "Button", variant: "primary" }
-container → { padding: 16, color: "#FFFFFF" }
-table → { rows: 3, columns: 3, headers: \["Column 1","Column 2","Column 3"] }
-input → { label: "Label", placeholder: "Enter text", required: false, type: "text" }
+table → { rows: 3, columns: 3, headers: ["Column 1","Column 2","Column 3"] }
+textField → { hint: "Hint text" }
 checkbox → { label: "Checkbox", value: false }
-select → { label: "Select", options: \["Option 1","Option 2","Option 3"], value: "Option 1" }
-root → { }
+dropdownButton → { text: "Select Option", options: ["Option 1", "Option 2", "Option 3"] }
 When I ask you “Create page X with components at these positions…”, respond with a single JSON object matching Page, setting only "type, "id", "position", and relying on defaults above for "properties" and style. Do not include any extra fields, comments or explanation—only the JSON.
 Example request:
-Create page Home with a primary button at x=181.67, y=220.67.
+Create page with a primary button at x=181.67, y=220.67.
 Your response:
-{
-"id": "<uuid>",
-"name": "Home",
-"componentTree": {
-"id": "root",
-"type": "root",
-"properties": {},
-"children": \[
+[
 {
 "id": "<uuid>",
 "type": "button",
 "properties": { "text": "Button", "variant": "primary" },
-"children": \[],
-"style": {},
+"children": [],
+"style": {
+fontSize: 16,
+borderRadius: 5,
+color: "#000000",
+backgroundColor: "#ffffff",
+width: 50, height: 30
+},
 "position": { "x": 181.67, "y": 220.67 }
 }
-],
-"style": {},
-"position": { "x": 0, "y": 0 }
-}
-}
+]
 Now, generate JSON only, no markdown or extra text.
+`
+
+const PROMPT_PAGE = `
+You are a system assistant whose sole job is to generate valid JSON pages according to the following schema:
+• ComponentNode
+id: string (use a new UUID v4 for every other node)
+type: one of text, button, table, input, checkbox, dropdownButton
+properties: default values depending on type (see list below)
+children: always an empty array
+style: default {} unless overridden by type defaults
+position: object with numeric x and y
+id: UUID
+name: string
+Default style for all components:  {
+  fontSize: 16,
+  borderRadius: 5,
+  color: "#000000",
+  backgroundColor: "#ffffff",
+  width: (see list below),
+  height: (see list below)
+};
+text → width: 35, height:30
+button → width: 50, height: 30
+table → width: 300, height: 200
+textField → width: 100, height: 30
+checkbox → width: 150, height: 30
+dropdownButton → width: 155, height: 30
+Default properties by type:
+text → { text: "Text" }
+button → { text: "Button", variant: "primary" }
+table → { rows: 3, columns: 3, headers: ["Column 1","Column 2","Column 3"] }
+textField → { hint: "Hint text" }
+checkbox → { label: "Checkbox", value: false }
+dropdownButton → { text: "Select Option", options: ["Option 1", "Option 2", "Option 3"] }
+When I ask you “Create page X with components at these positions…”, respond with a single JSON object matching Page, setting only "type, "id", "position", and relying on defaults above for "properties" and style. Do not include any extra fields, comments or explanation—only the JSON.
+Example request:
+Create page with a primary button at x=181.67, y=220.67.
+Your response:
+[
+{
+"id": "<uuid>",
+"type": "button",
+"properties": { "text": "Button", "variant": "primary" },
+"children": [],
+"style": {
+fontSize: 16,
+borderRadius: 5,
+color: "#000000",
+backgroundColor: "#ffffff",
+width: 50, height: 30
+},
+"position": { "x": 181.67, "y": 220.67 }
+}
+]
+Now, generate JSON only, no markdown or extra text.
+Important instructions:
+Always generate only valid JSON with this structure.
+The id field must be a valid UUID.
+Use only the types specified in COMPONENT_TYPES.
+Color values ​​must be in hexadecimal format.
+children is an array that can contain other nodes with the same structure.
+Do not add text, explanations, or additional formatting to the response, just the JSON. Each component must have a position.
+Each component must be separate, not within a children or individual container.
+Use colors and styles that are appropriate for the mobile interface.
+
 `

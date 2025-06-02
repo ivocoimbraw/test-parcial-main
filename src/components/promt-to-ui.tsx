@@ -2,6 +2,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/sh-button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/sh-card";
 import { TabsContent } from "@/components/ui/sh-tabs";
+import { sendMessageGeminiPage } from "@/lib/gemini";
+import { toast } from "sonner";
+import { parseJsonToPage } from "@/lib/utils";
+import { useDesignerStore } from "@/lib/store";
 
 interface Message {
   id: number;
@@ -14,6 +18,7 @@ function PromtToUI({ onSuccess }: { onSuccess?: () => void }) {
   const [inputValue, setInputValue] = useState("");
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { addPageInterface } = useDesignerStore();
 
   // Auto-scroll to bottom when a new message arrives
   useEffect(() => {
@@ -25,10 +30,12 @@ function PromtToUI({ onSuccess }: { onSuccess?: () => void }) {
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
+    const userPrompt = inputValue.trim();
+
     const userMessage: Message = {
       id: Date.now(),
       sender: "user",
-      text: inputValue.trim(),
+      text: userPrompt,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -36,27 +43,27 @@ function PromtToUI({ onSuccess }: { onSuccess?: () => void }) {
     setIsSending(true);
 
     try {
-      // Aquí podrías llamar a tu función para generar UI a partir del prompt
-      // por ejemplo: const uiResult = await GenerateUIFromPrompt(inputValue);
-      // Luego agregar la respuesta del "bot" a los mensajes, p. ej.:
-      const fakeBotResponse: Message = {
-        id: Date.now() + 1,
-        sender: "bot",
-        text: "Procesando tu prompt...",
-      };
-      setMessages((prev) => [...prev, fakeBotResponse]);
+      const assistantMessage = await sendMessageGeminiPage(userPrompt);
+      if (!assistantMessage) {
+        toast.warning("No se recibió respuesta del asistente.");
+        return;
+      }
 
-      // Simular retraso para demostración; reemplaza con tu lógica real
-      setTimeout(() => {
-        const uiGeneratedResponse: Message = {
+      if (!assistantMessage.trim().startsWith("```json")) {
+        const message: Message = {
           id: Date.now() + 2,
+          text: assistantMessage,
           sender: "bot",
-          text: "Aquí estaría la interfaz generada a partir de tu prompt.",
         };
-        setMessages((prev) => [...prev, uiGeneratedResponse]);
-        setIsSending(false);
-        if (onSuccess) onSuccess();
-      }, 1500);
+
+        setMessages((prev) => [...prev, message]);
+      }
+      const page = parseJsonToPage(assistantMessage);
+
+      addPageInterface(page);
+
+      setIsSending(false);
+      if (onSuccess) onSuccess();
     } catch (error) {
       console.error("Error procesando prompt:", error);
       setIsSending(false);
@@ -75,9 +82,8 @@ function PromtToUI({ onSuccess }: { onSuccess?: () => void }) {
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[70%] px-3 py-2 rounded-lg break-words ${
-                    msg.sender === "user" ? "bg-cyan-600 text-white" : "bg-white/10 text-cyan-100"
-                  }`}
+                  className={`max-w-[70%] px-3 py-2 rounded-lg break-words ${msg.sender === "user" ? "bg-cyan-600 text-white" : "bg-white/10 text-cyan-100"
+                    }`}
                 >
                   {msg.text}
                 </div>

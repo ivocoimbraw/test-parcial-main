@@ -5,12 +5,16 @@ import { TabsContent } from "@/components/ui/sh-tabs";
 import { useDropzone } from "react-dropzone";
 import Image from "next/image";
 import { UploadCloud } from "lucide-react";
-// import { GenerateImageToPageGemini } from "@/utils/generateImageTopageGemini";
+import { sendBocetoGemini } from "@/lib/gemini";
+import { useDesignerStore } from "@/lib/store";
+import { parseJsonToPage } from "@/lib/utils";
+
 
 function ImageToUIComponent({ onSuccess }: { onSuccess?: () => void }) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [fileImage, setFileImage] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const { addPageInterface } = useDesignerStore()
 
   const onDropImage = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -30,8 +34,12 @@ function ImageToUIComponent({ onSuccess }: { onSuccess?: () => void }) {
     setIsGenerating(true);
 
     try {
-      // await GenerateImageToPageGemini(editor, fileImage, "GeneratedByGemini");
+      const jsonResponse = await sendBocetoGemini(fileImage);
 
+      const page = parseJsonToPage(jsonResponse);
+
+      addPageInterface(page);
+      
       setFileImage(null);
       setImagePreview(null);
       if (onSuccess) onSuccess();

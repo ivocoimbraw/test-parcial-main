@@ -170,6 +170,7 @@ export default function ComponentPalette() {
               type={COMPONENT_TYPES.DROPDOWN_BUTTON}
               name="Dropdown Button"
               icon={<ChevronDown size={16} />}
+              style={{color: "#000000"}}
               properties={{ text: "Select Option", options: ["Option 1", "Option 2", "Option 3"] }}
             />
           </TabsContent>

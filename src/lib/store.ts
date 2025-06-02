@@ -26,7 +26,7 @@ interface DesignerState {
   // Component actions
   addComponent: (type: string, properties: Record<string, any>, parentId: string | null, style: Record<string, any>) => void
   updateComponentProperty: (id: string, property: string, value: any) => void
-  updateComponent:(componentNode: ComponentNode) => void
+  updateComponent: (componentNode: ComponentNode) => void
   deleteComponent: (id: string) => void
   selectComponent: (id: string | null) => void
   getSelectedComponent: () => ComponentNode | null
@@ -117,16 +117,43 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
   },
 
   addPageInterface: (newPage) => {
-    set((state) => ({
-      pages: [...state.pages, newPage],
-      currentPageId: newPage.id,
-      componentTree: { ...initialComponentTree },
-      selectedComponentId: null,
-      history: [{ ...initialComponentTree }],
-      historyIndex: 0,
-      canUndo: false,
-      canRedo: false,
-    }))
+    set((state) => {
+      // 1. Obtener todos los nombres existentes
+      const existingNames = state.pages.map((page) => page.name);
+
+      // 2. Función para generar nombre único
+      const generateUniqueName = (baseName: string): string => {
+        if (!existingNames.includes(baseName)) return baseName;
+
+        let suffix = 1;
+        let newName = `${baseName}${suffix}`;
+        while (existingNames.includes(newName)) {
+          suffix++;
+          newName = `${baseName}${suffix}`;
+        }
+        return newName;
+      };
+
+      // 3. Generar nombre único si es necesario
+      const uniqueName = generateUniqueName(newPage.name);
+
+      // 4. Clonar y actualizar el nombre de la página nueva
+      const finalPage = {
+        ...newPage,
+        name: uniqueName,
+      };
+
+      return {
+        pages: [...state.pages, finalPage],
+        currentPageId: finalPage.id,
+        componentTree: { ...initialComponentTree },
+        selectedComponentId: null,
+        history: [{ ...initialComponentTree }],
+        historyIndex: 0,
+        canUndo: false,
+        canRedo: false,
+      };
+    });
   },
 
   renamePage: (id, name) => {
