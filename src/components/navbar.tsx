@@ -1,50 +1,63 @@
+"use client";
 import React from "react";
+import { usePathname } from "next/navigation";
 import { TabsGenerator } from "./tobs-generator";
 
 const Navbar = () => {
+  const pathname = usePathname();
+
   const navItems = [
     { name: "Exportar", href: "#" },
     { name: "Generador", href: "#" },
     { name: "Compartir", href: "#" },
   ];
 
+  const handleLogout = () => {
+    // Lógica de cerrar sesión
+    console.log("Cerrando sesión...");
+  };
+
+  const showTabsGenerator = pathname?.includes("/editor-desing");
+
   return (
-    <nav className="bg-black/20 backdrop-blur-md border-b border-white/10">
+    <nav className="relative z-10 backdrop-blur-xl bg-black/30 border-b border-purple-500/30 shadow-2xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex-shrink-0">
-            <div className="text-white font-bold text-xl tracking-tight">
-              <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                TechBrand
-              </span>
+        <div className="flex justify-between items-center h-20">
+          <div className="flex items-center ">
+            <div className="relative">
+              <div className="text-2xl font-black bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                ◉ ASOCIAL
+              </div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400/20 to-purple-400/20 rounded-lg blur opacity-60"></div>
             </div>
           </div>
 
-          {/* Navigation - Siempre visible */}
-          {/* <div className="flex items-center space-x-8">
-            {navItems.map((item) => (
-              <div key={item.name} className="relative group">
-                <a
-                  href={item.href}
-                  className="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors duration-200 flex items-center gap-1 relative group"
-                >
-                  {item.name}
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-500 group-hover:w-full transition-all duration-300"></span>
-                </a>
+          {showTabsGenerator && (
+            <div className="flex justify-between items-center relative z-20">
+              <div className="flex items-center gap-3">
+                <TabsGenerator />
               </div>
-            ))} */}
-
-          {/* CTA Button integrado */}
-          {/* <button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 ml-4">
-              Comenzar
-            </button>
-          </div> */}
-
-          <div className="flex justify-between items-center relative z-20">
-            <div className="flex items-center gap-3">
-              <TabsGenerator />
             </div>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleLogout}
+              className="relative group px-4 py-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-400/30 rounded-xl text-red-300 hover:text-white transition-all duration-300 backdrop-blur-sm"
+            >
+              <span className="relative z-10 flex items-center space-x-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                <span>Logout</span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 to-pink-500/0 group-hover:from-red-500/20 group-hover:to-pink-500/20 rounded-xl transition-all duration-300"></div>
+            </button>
           </div>
         </div>
       </div>

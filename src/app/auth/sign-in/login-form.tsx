@@ -28,20 +28,18 @@ function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
       token = localStorage.getItem("token");
     }
 
-
-      if (user && !error && token) {
-        // toast("Successful Login ", {
-        //   description: "Now you can start collaborating with your teammates.",
-        // });
-           router.push(`/editor-desing`);
-      } else {
-        // toast("Error login", {
-        //   descrption: "Please try again later.",
-        // });
-      }
-  }
-
-
+    if (user && !error && token) {
+      // toast("Successful Login ", {
+      //   description: "Now you can start collaborating with your teammates.",
+      // });
+      console.log(user);
+      router.push(`/welcome`);
+    } else {
+      // toast("Error login", {
+      //   descrption: "Please try again later.",
+      // });
+    }
+  };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>

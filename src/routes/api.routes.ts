@@ -12,5 +12,14 @@ export const API_ROUTES = {
   GEMINI_API: {
     url: `${API_URL}/api/gemini/chat`,
     method: "POST",
-  }
+  },
+  /* ROOMS */
+  CREATE_ROOM_USER: {
+    url: `${API_URL}/sala`,
+    method: "POST",
+  },
+  GET_ROOMS_USER: {
+    url: `${API_URL}/sala`,
+    method: "GET",
+  },
 };
