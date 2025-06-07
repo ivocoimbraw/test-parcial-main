@@ -209,13 +209,13 @@ function RoomPage() {
       </main>
 
       {/* Botón para guardar manualmente (opcional) */}
-      <div className="fixed bottom-4 right-4">
+      <div className="fixed top-4 right-4 z-10">
         <button
           onClick={saveRoomData}
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg transition-colors"
+          className="relative group px-4 py-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-400/30 rounded-xl text-red-300 hover:text-white transition-all duration-300 backdrop-blur-sm"
           title="Guardar cambios"
         >
-          💾 Guardar
+          Guardar
         </button>
       </div>
     </div>
