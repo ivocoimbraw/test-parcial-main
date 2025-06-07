@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/useAuthStore";
 import { set } from "react-hook-form";
 import { API_ROUTES } from "@/routes/api.routes";
+import { useDesignerStore } from "@/lib/store";
 
 interface Room {
   id: number;
@@ -26,6 +27,8 @@ export default function Welcome({ rooms = [] }) {
 
   const { user, error } = useAuthStore.getState();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  const { pages } = useDesignerStore();
 
   useEffect(() => {
     const fetchUserRooms = async () => {
@@ -89,7 +92,7 @@ export default function Welcome({ rooms = [] }) {
 
       const body = {
         name: newRoomName.trim(),
-        dataJson: "string",
+        datosJson: JSON.stringify(pages),
       };
       const response = await fetch(API_ROUTES.CREATE_ROOM_USER.url, {
         method: API_ROUTES.CREATE_ROOM_USER.method,

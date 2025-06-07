@@ -22,4 +22,12 @@ export const API_ROUTES = {
     url: `${API_URL}/sala`,
     method: "GET",
   },
+  GET_ROOM_BY_ID: {
+    url: `${API_URL}/sala`,
+    method: "GET",
+  },
+  UPDATE_ROOM: {
+    url: `${API_URL}/sala`,
+    method: "PUT",
+  },
 };

@@ -2,19 +2,18 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import { TabsGenerator } from "./tobs-generator";
+import { useAuthStore } from "@/lib/useAuthStore";
+import { useRouter } from "next/navigation";
 
 const Navbar = () => {
   const pathname = usePathname();
-
-  const navItems = [
-    { name: "Exportar", href: "#" },
-    { name: "Generador", href: "#" },
-    { name: "Compartir", href: "#" },
-  ];
+  const router = useRouter();
 
   const handleLogout = () => {
     // Lógica de cerrar sesión
     console.log("Cerrando sesión...");
+    useAuthStore.getState().logout();
+    router.push("/");
   };
 
   const showTabsGenerator = pathname?.includes("/editor-desing");
