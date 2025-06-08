@@ -24,7 +24,6 @@ export default function PropertyPanel() {
     useDesignerStore();
 
   const selectedComponent = getSelectedComponent();
-  console.log("selectected component: ", selectedComponent);
   if (!selectedComponent) {
     return (
       <div className="w-64 border-l bg-[#0a0f14] p-4 flex flex-col items-center justify-center text-gray-400">

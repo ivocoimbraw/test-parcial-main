@@ -163,14 +163,14 @@ export default function ComponentPalette() {
               type={COMPONENT_TYPES.RADIO}
               name="Radio Button"
               icon={<Square size={16} />}
-              properties={{ label: "Option", value: "option", groupValue: "option" }}
+              properties={{ label: "Option", value: false, groupValue: "option" }}
               style={{ ...defaultStyle, width: 70, height: 30 }}
             />
             <ComponentItem
               type={COMPONENT_TYPES.DROPDOWN_BUTTON}
               name="Dropdown Button"
               icon={<ChevronDown size={16} />}
-              style={{color: "#000000"}}
+              style={{ color: "#000000" }}
               properties={{ text: "Select Option", options: ["Option 1", "Option 2", "Option 3"] }}
             />
           </TabsContent>

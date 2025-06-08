@@ -1,425 +1,289 @@
-"use client"
+"use client";
 
-import type { ComponentNode, Page } from "@/lib/types"
-import { COMPONENT_TYPES } from "@/lib/constants"
+import type { ComponentNode, Page } from "@/lib/types";
+import { COMPONENT_TYPES } from "@/lib/constants";
 
+// Función para detectar si una página necesita estado
+function pageNeedsState(componentTree: ComponentNode): boolean {
+  const checkComponentForState = (component: ComponentNode): boolean => {
+    // Componentes que necesitan estado
+    const statefulComponents = [
+      COMPONENT_TYPES.CHECKBOX,
+      COMPONENT_TYPES.SWITCH,
+      COMPONENT_TYPES.SLIDER,
+      COMPONENT_TYPES.TEXT_FIELD,
+      COMPONENT_TYPES.RADIO,
+      COMPONENT_TYPES.DROPDOWN_BUTTON,
+    ];
 
-export function generateFlutterCodeTest(component: ComponentNode, indent = 0): string {
-    const spaces = " ".repeat(indent)
-    let widgetCode = "";
-
-    switch (component.type) {
- 
-        case COMPONENT_TYPES.SLIDER:
-            const sliderValue = component.properties.value || 50
-            const sliderMin = component.properties.min || 0
-            const sliderMax = component.properties.max || 100
-
-            widgetCode = `${spaces}Column(
-${spaces}  children: [
-${spaces}    Slider(
-${spaces}      value: ${sliderValue}.0,
-${spaces}      min: ${sliderMin}.0,
-${spaces}      max: ${sliderMax}.0,
-${spaces}      onChanged: (value) {},
-${spaces}    ),
-${spaces}    Text('Value: ${sliderValue}'),
-${spaces}  ],
-${spaces})`
-            break;
-        case COMPONENT_TYPES.DROPDOWN_BUTTON:
-            const dropdownOptions = component.properties.options || ["Option 1", "Option 2", "Option 3"]
-            widgetCode = `${spaces}DropdownButton<String>(
-${spaces}  value: '${dropdownOptions[0]}',
-${spaces}  items: [
-${dropdownOptions.map((option: string) => `${spaces}    DropdownMenuItem(\n${spaces}      value: '${option.replace(/'/g, "\\'")}',\n${spaces}      child: Text('${option.replace(/'/g, "\\'")}'),\n${spaces}    )`).join(",\n")}
-${spaces}  ],
-${spaces}  onChanged: (value) {},
-${spaces})`
-            break;
-       
-        case COMPONENT_TYPES.TABLE:
-            const rows = component.properties.rows || 3
-            const columns = component.properties.columns || 3
-            const headers = component.properties.headers || Array.from({ length: columns }, (_, i) => `Column ${i + 1}`)
-
-            widgetCode = `${spaces}Table(
-${spaces}  border: TableBorder.all(),
-${spaces}  children: [
-${spaces}    TableRow(
-${spaces}      decoration: BoxDecoration(color: Colors.grey[200]),
-${spaces}      children: [
-${headers.map((header: string) => `${spaces}        Padding(\n${spaces}          padding: EdgeInsets.all(8.0),\n${spaces}          child: Text(\n${spaces}            '${header.replace(/'/g, "\\'")}',\n${spaces}            style: TextStyle(fontWeight: FontWeight.bold),\n${spaces}          ),\n${spaces}        )`).join(",\n")}
-${spaces}      ],
-${spaces}    ),
-${Array.from({ length: rows })
-                    .map(
-                        (_, rowIndex) =>
-                            `${spaces}    TableRow(\n${spaces}      children: [\n${Array.from({ length: columns })
-                                .map(
-                                    (_, colIndex) =>
-                                        `${spaces}        Padding(\n${spaces}          padding: EdgeInsets.all(8.0),\n${spaces}          child: Text('Row ${rowIndex + 1}, Col ${colIndex + 1}'),\n${spaces}        )`,
-                                )
-                                .join(",\n")}\n${spaces}      ],\n${spaces}    )`,
-                    )
-                    .join(",\n")}
-${spaces}  ],
-${spaces})`
-                    break;
-        case COMPONENT_TYPES.TEXT:
-            widgetCode = `${spaces}Text(
-${spaces}  '${(component.properties.text || "Text").replace(/'/g, "\\'")}',
-${spaces}  style: TextStyle(
-${spaces}    fontSize: ${component.style?.fontSize || 16},
-${component.style?.color ? `${spaces}    color: Color(0xFF${component.style.color.substring(1)}),\n` : ""}${spaces}  ),
-${spaces})`
-                    break;
-        case COMPONENT_TYPES.BUTTON:
-            const buttonVariant = component.properties.variant || "primary"
-            let buttonWidget = ""
-            switch (buttonVariant) {
-                case "primary":
-                    buttonWidget = `${spaces}ElevatedButton(
-${spaces}  onPressed: () {},
-${spaces}  child: Text('${(component.properties.text || "Button").replace(/'/g, "\\'")}'),
-${spaces})`
-                    break
-                case "outline":
-                    buttonWidget = `${spaces}OutlinedButton(
-${spaces}  onPressed: () {},
-${spaces}  child: Text('${(component.properties.text || "Button").replace(/'/g, "\\'")}'),
-${spaces})`
-                    break
-                case "text":
-                    buttonWidget = `${spaces}TextButton(
-${spaces}  onPressed: () {},
-${spaces}  child: Text('${(component.properties.text || "Button").replace(/'/g, "\\'")}'),
-${spaces})`
-                    break
-                default:
-                    buttonWidget = `${spaces}ElevatedButton(
-${spaces}  onPressed: () {},
-${spaces}  child: Text('${(component.properties.text || "Button").replace(/'/g, "\\'")}'),
-${spaces})`
-            }
-
-            widgetCode = buttonWidget
-            break;
-        case COMPONENT_TYPES.CONTAINER:
-            const padding = component.properties.padding || 16
-            const color = component.properties.color || "#FFFFFF"
-            const borderRadius = component.style?.borderRadius || 0
-
-            let containerCode = `${spaces}Container(
-${spaces}  padding: EdgeInsets.all(${padding}),
-${color !== "#FFFFFF" ? `${spaces}  decoration: BoxDecoration(\n${spaces}    color: Color(0xFF${color.substring(1)}),\n${borderRadius > 0 ? `${spaces}    borderRadius: BorderRadius.circular(${borderRadius}),\n` : ""}${spaces}  ),\n` : borderRadius > 0 ? `${spaces}  decoration: BoxDecoration(\n${spaces}    borderRadius: BorderRadius.circular(${borderRadius}),\n${spaces}  ),\n` : ""}`
-
-            if (component.children.length > 0) {
-                if (component.children.length === 1) {
-                    containerCode += `${spaces}  child: ${generateFlutterCode(component.children[0], indent + 2).trim()},\n`
-                } else {
-                    containerCode += `${spaces}  child: Column(
-${spaces}    children: [
-${component.children.map((child) => generateFlutterCode(child, indent + 6)).join(",\n")}
-${spaces}    ],
-${spaces}  ),\n`
-                }
-            }
-
-            containerCode += `${spaces})`
-            widgetCode = containerCode
-            break;
-        
-        case COMPONENT_TYPES.STACK:
-            let stackCode = `${spaces}Stack(
-${spaces}  alignment: Alignment.${component.properties.alignment || "center"},
-${spaces}  children: [`
-
-            if (component.children.length > 0) {
-                stackCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 4)).join(",\n")}\n${spaces}  `
-            }
-
-            stackCode += `],
-${spaces})`
-            widgetCode = stackCode
-            break;
-        case COMPONENT_TYPES.CARD:
-            let cardCode = `${spaces}Card(
-${spaces}  elevation: 2.0,
-${spaces}  shape: RoundedRectangleBorder(
-${spaces}    borderRadius: BorderRadius.circular(${component.style?.borderRadius || 8}),
-${spaces}  ),
-${spaces}  child: Padding(
-${spaces}    padding: const EdgeInsets.all(16.0),
-${spaces}    child: Column(
-${spaces}      crossAxisAlignment: CrossAxisAlignment.start,
-${spaces}      mainAxisSize: MainAxisSize.min,
-${spaces}      children: [
-${spaces}        Text(
-${spaces}          '${(component.properties.title || "Card Title").replace(/'/g, "\\'")}',
-${spaces}          style: TextStyle(
-${spaces}            fontWeight: FontWeight.bold,
-${spaces}          ),
-${spaces}        ),
-${spaces}        SizedBox(height: 8),
-${spaces}        Text('${(component.properties.content || "Card content goes here").replace(/'/g, "\\'")}'),`
-
-            if (component.children.length > 0) {
-                cardCode += `\n${spaces}        SizedBox(height: 8),`
-                cardCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 8)).join(",\n")}`
-            }
-
-            cardCode += `\n${spaces}      ],
-${spaces}    ),
-${spaces}  ),
-${spaces})`
-            widgetCode = cardCode
-            break;
-        case COMPONENT_TYPES.TEXT_FIELD:
-            widgetCode = `${spaces}TextField(
-${spaces}  decoration: InputDecoration(
-${spaces}    labelText: '${(component.properties.hint || "Label").replace(/'/g, "\\'")}',
-${spaces}    border: OutlineInputBorder(
-${spaces}      borderRadius: BorderRadius.circular(${component.style?.borderRadius || 4}),
-${spaces}    ),
-${spaces}  ),
-${spaces})`
-            break;
-        case COMPONENT_TYPES.CHECKBOX:
-            widgetCode = `${spaces}Row(
-${spaces}  children: [
-${spaces}    Checkbox(
-${spaces}      value: ${component.properties.value ? "true" : "false"},
-${spaces}      onChanged: (value) {},
-${spaces}    ),
-${spaces}    SizedBox(width: 8),
-${spaces}    Text('${(component.properties.label || "Checkbox").replace(/'/g, "\\'")}'),
-${spaces}  ],
-${spaces})`
-            break;
-        case COMPONENT_TYPES.SWITCH:
-            widgetCode = `${spaces}Switch(
-${spaces}  value: ${component.properties.value ? "true" : "false"},
-${spaces}  onChanged: (value) {},
-${spaces})`
-            break;
-        case COMPONENT_TYPES.RADIO:
-            widgetCode = `${spaces}Row(
-${spaces}  children: [
-${spaces}    Radio<String>(
-${spaces}      value: '${component.properties.value || "option"}',
-${spaces}      groupValue: '${component.properties.groupValue || "option"}',
-${spaces}      onChanged: (value) {},
-${spaces}    ),
-${spaces}    SizedBox(width: 8),
-${spaces}    Text('${(component.properties.label || "Radio Button").replace(/'/g, "\\'")}'),
-${spaces}  ],
-${spaces})`
-            break;
-        case COMPONENT_TYPES.ICON:
-            const iconName = component.properties.icon || "star"
-            widgetCode = `${spaces}Icon(
-${spaces}  Icons.${iconName},
-${spaces}  size: ${component.properties.size || 24},
-${component.style?.color ? `${spaces}  color: Color(0xFF${component.style.color.substring(1)}),\n` : ""}${spaces})`
-            break;
-        case COMPONENT_TYPES.LIST_VIEW:
-            const scrollDirection = component.properties.scrollDirection || "vertical"
-            const itemCount = component.properties.itemCount || 3
-
-            let listViewCode = `${spaces}ListView.builder(
-${spaces}  scrollDirection: Axis.${scrollDirection},
-${spaces}  itemCount: ${itemCount},
-${spaces}  itemBuilder: (context, index) {
-${spaces}    return Padding(
-${spaces}      padding: const EdgeInsets.all(8.0),
-${spaces}      child: Container(
-${spaces}        padding: const EdgeInsets.all(16.0),
-${spaces}        decoration: BoxDecoration(
-${spaces}          color: Colors.grey[200],
-${spaces}          borderRadius: BorderRadius.circular(4),
-${spaces}        ),
-${spaces}        child: Text('List Item \${index + 1}'),
-${spaces}      ),
-${spaces}    );
-${spaces}  },
-${spaces})`
-
-            if (component.children.length > 0) {
-                listViewCode = `${spaces}Column(
-${spaces}  children: [
-${spaces}    ${listViewCode.trim()},
-${component.children.map((child) => generateFlutterCode(child, indent + 4)).join(",\n")}
-${spaces}  ],
-${spaces})`
-            }
-
-            widgetCode = listViewCode
-            break;
-        default:
-            widgetCode = `${spaces}// Unknown component type: ${component.type}`
+    if (statefulComponents.includes(component.type)) {
+      return true;
     }
 
-    if (component.position) {
-        const { x, y } = component.position;
-        const posSpaces = " ".repeat(indent);
-        widgetCode = `${posSpaces}Positioned(
-${posSpaces}  left: ${Math.trunc(x)},
-${posSpaces}  top: ${Math.trunc(y)},
-${posSpaces}  child: \
-SizedBox(
-                    width: ${component.style?.width || "30"},
-                    height: ${component.style?.height || "30"},
-                    child:   
-${widgetCode.trim().split("\n").map(line => `${posSpaces}    ${line.trim()}`).join("\n")},
-    )
-${posSpaces})`;
-    }
+    // Revisar recursivamente los hijos
+    return component.children.some((child) => checkComponentForState(child));
+  };
 
-    return widgetCode;
-
+  return componentTree.children.some((child) => checkComponentForState(child));
 }
 
+// Función para generar variables de estado
+function generateStateVariables(componentTree: ComponentNode, indent = 0): string {
+  const spaces = " ".repeat(indent);
+  let stateVars: string[] = [];
 
-// Generate Flutter code for a component with proper nesting
-export function generateFlutterCode(component: ComponentNode, indent = 0): string {
-  const spaces = " ".repeat(indent)
+  const collectStateVariables = (component: ComponentNode) => {
+    switch (component.type) {
+      case COMPONENT_TYPES.CHECKBOX:
+        const checkboxId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+        stateVars.push(`${spaces}bool _checkbox${checkboxId} = ${component.properties.value ? "true" : "false"};`);
+        break;
+      case COMPONENT_TYPES.SWITCH:
+        const switchId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+        stateVars.push(`${spaces}bool _switch${switchId} = ${component.properties.value ? "true" : "false"};`);
+        break;
+      case COMPONENT_TYPES.SLIDER:
+        const sliderId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+        const sliderValue = component.properties.value || 50;
+        stateVars.push(`${spaces}double _slider${sliderId} = ${sliderValue}.0;`);
+        break;
+      case COMPONENT_TYPES.TEXT_FIELD:
+        const textFieldId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+        stateVars.push(`${spaces}final TextEditingController _textController${textFieldId} = TextEditingController();`);
+        break;
+      case COMPONENT_TYPES.DROPDOWN_BUTTON:
+        const dropdownId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+        const options = component.properties.options || ["Option 1", "Option 2", "Option 3"];
+        stateVars.push(`${spaces}String? _dropdown${dropdownId} = '${options[0]}';`);
+        break;
+      case COMPONENT_TYPES.RADIO:
+        const radioId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+        stateVars.push(`${spaces}String? _radio${radioId} = '${component.properties.groupValue || "option"}';`);
+        break;
+    }
+
+    // Procesar hijos recursivamente
+    component.children.forEach((child) => collectStateVariables(child));
+  };
+
+  componentTree.children.forEach((child) => collectStateVariables(child));
+
+  return stateVars.join("\n");
+}
+
+// Función para generar dispose method
+function generateDisposeMethod(componentTree: ComponentNode, indent = 0): string {
+  const spaces = " ".repeat(indent);
+  let disposeItems: string[] = [];
+
+  const collectDisposeItems = (component: ComponentNode) => {
+    if (component.type === COMPONENT_TYPES.TEXT_FIELD) {
+      const textFieldId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+      disposeItems.push(`${spaces}    _textController${textFieldId}.dispose();`);
+    }
+    component.children.forEach((child) => collectDisposeItems(child));
+  };
+
+  componentTree.children.forEach((child) => collectDisposeItems(child));
+
+  if (disposeItems.length > 0) {
+    return `${spaces}@override
+${spaces}void dispose() {
+${disposeItems.join("\n")}
+${spaces}    super.dispose();
+${spaces}}\n`;
+  }
+
+  return "";
+}
+
+export function generateFlutterCodeTest(component: ComponentNode, indent = 0): string {
+  const spaces = " ".repeat(indent);
   let widgetCode = "";
 
   switch (component.type) {
-
     case COMPONENT_TYPES.SLIDER:
-      const sliderValue = component.properties.value || 50
-      const sliderMin = component.properties.min || 0
-      const sliderMax = component.properties.max || 100
+      const sliderValue = component.properties.value || 50;
+      const sliderMin = component.properties.min || 0;
+      const sliderMax = component.properties.max || 100;
+      const sliderId = component.id.replace(/[^a-zA-Z0-9]/g, "");
 
-      return `${spaces}Column(
+      widgetCode = `${spaces}Column(
 ${spaces}  children: [
 ${spaces}    Slider(
-${spaces}      value: ${sliderValue}.0,
+${spaces}      value: _slider${sliderId},
 ${spaces}      min: ${sliderMin}.0,
 ${spaces}      max: ${sliderMax}.0,
-${spaces}      onChanged: (value) {},
+${spaces}      onChanged: (value) {
+${spaces}        setState(() {
+${spaces}          _slider${sliderId} = value;
+${spaces}        });
+${spaces}      },
 ${spaces}    ),
-${spaces}    Text('Value: ${sliderValue}'),
+${spaces}    Text('Value: \${_slider${sliderId}.round()}'),
 ${spaces}  ],
-${spaces})`
+${spaces})`;
+      break;
 
     case COMPONENT_TYPES.DROPDOWN_BUTTON:
-      const dropdownOptions = component.properties.options || ["Option 1", "Option 2", "Option 3"]
-      return `${spaces}DropdownButton<String>(
-${spaces}  value: '${dropdownOptions[0]}',
+      const dropdownOptions = component.properties.options || ["Option 1", "Option 2", "Option 3"];
+      const dropdownId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+      widgetCode = `${spaces}DropdownButton<String>(
+${spaces}  value: _dropdown${dropdownId},
 ${spaces}  items: [
-${dropdownOptions.map((option: string) => `${spaces}    DropdownMenuItem(\n${spaces}      value: '${option.replace(/'/g, "\\'")}',\n${spaces}      child: Text('${option.replace(/'/g, "\\'")}'),\n${spaces}    )`).join(",\n")}
+${dropdownOptions
+  .map(
+    (option: string) =>
+      `${spaces}    DropdownMenuItem(\n${spaces}      value: '${option.replace(
+        /'/g,
+        "\\'"
+      )}',\n${spaces}      child: Text('${option.replace(/'/g, "\\'")}'),\n${spaces}    )`
+  )
+  .join(",\n")}
 ${spaces}  ],
-${spaces}  onChanged: (value) {},
-${spaces})`
+${spaces}  onChanged: (value) {
+${spaces}    setState(() {
+${spaces}      _dropdown${dropdownId} = value;
+${spaces}    });
+${spaces}  },
+${spaces})`;
+      break;
 
     case COMPONENT_TYPES.TABLE:
-      const rows = component.properties.rows || 3
-      const columns = component.properties.columns || 3
-      const headers = component.properties.headers || Array.from({ length: columns }, (_, i) => `Column ${i + 1}`)
+      const rows = component.properties.rows || 3;
+      const columns = component.properties.columns || 3;
+      const headers = component.properties.headers || Array.from({ length: columns }, (_, i) => `Column ${i + 1}`);
 
-      return `${spaces}Table(
+      widgetCode = `${spaces}Table(
 ${spaces}  border: TableBorder.all(),
 ${spaces}  children: [
 ${spaces}    TableRow(
 ${spaces}      decoration: BoxDecoration(color: Colors.grey[200]),
 ${spaces}      children: [
-${headers.map((header: string) => `${spaces}        Padding(\n${spaces}          padding: EdgeInsets.all(8.0),\n${spaces}          child: Text(\n${spaces}            '${header.replace(/'/g, "\\'")}',\n${spaces}            style: TextStyle(fontWeight: FontWeight.bold),\n${spaces}          ),\n${spaces}        )`).join(",\n")}
+${headers
+  .map(
+    (header: string) =>
+      `${spaces}        Padding(\n${spaces}          padding: EdgeInsets.all(8.0),\n${spaces}          child: Text(\n${spaces}            '${header.replace(
+        /'/g,
+        "\\'"
+      )}',\n${spaces}            style: TextStyle(fontWeight: FontWeight.bold),\n${spaces}          ),\n${spaces}        )`
+  )
+  .join(",\n")}
 ${spaces}      ],
 ${spaces}    ),
 ${Array.from({ length: rows })
-          .map(
-            (_, rowIndex) =>
-              `${spaces}    TableRow(\n${spaces}      children: [\n${Array.from({ length: columns })
-                .map(
-                  (_, colIndex) =>
-                    `${spaces}        Padding(\n${spaces}          padding: EdgeInsets.all(8.0),\n${spaces}          child: Text('Row ${rowIndex + 1}, Col ${colIndex + 1}'),\n${spaces}        )`,
-                )
-                .join(",\n")}\n${spaces}      ],\n${spaces}    )`,
-          )
-          .join(",\n")}
+  .map(
+    (_, rowIndex) =>
+      `${spaces}    TableRow(\n${spaces}      children: [\n${Array.from({ length: columns })
+        .map(
+          (_, colIndex) =>
+            `${spaces}        Padding(\n${spaces}          padding: EdgeInsets.all(8.0),\n${spaces}          child: Text('Row ${
+              rowIndex + 1
+            }, Col ${colIndex + 1}'),\n${spaces}        )`
+        )
+        .join(",\n")}\n${spaces}      ],\n${spaces}    )`
+  )
+  .join(",\n")}
 ${spaces}  ],
-${spaces})`
+${spaces})`;
+      break;
 
     case COMPONENT_TYPES.TEXT:
-      return `${spaces}Text(
+      widgetCode = `${spaces}Text(
 ${spaces}  '${(component.properties.text || "Text").replace(/'/g, "\\'")}',
 ${spaces}  style: TextStyle(
 ${spaces}    fontSize: ${component.style?.fontSize || 16},
 ${component.style?.color ? `${spaces}    color: Color(0xFF${component.style.color.substring(1)}),\n` : ""}${spaces}  ),
-${spaces})`
+${spaces})`;
+      break;
 
     case COMPONENT_TYPES.BUTTON:
-      const buttonVariant = component.properties.variant || "primary"
-      let buttonWidget = ""
-
+      const buttonVariant = component.properties.variant || "primary";
+      let buttonWidget = "";
       switch (buttonVariant) {
         case "primary":
           buttonWidget = `${spaces}ElevatedButton(
-${spaces}  onPressed: () {},
+${spaces}  onPressed: () {
+${spaces}    // Acción del botón
+${spaces}  },
 ${spaces}  child: Text('${(component.properties.text || "Button").replace(/'/g, "\\'")}'),
-${spaces})`
-          break
+${spaces})`;
+          break;
         case "outline":
           buttonWidget = `${spaces}OutlinedButton(
-${spaces}  onPressed: () {},
+${spaces}  onPressed: () {
+${spaces}    // Acción del botón
+${spaces}  },
 ${spaces}  child: Text('${(component.properties.text || "Button").replace(/'/g, "\\'")}'),
-${spaces})`
-          break
+${spaces})`;
+          break;
         case "text":
           buttonWidget = `${spaces}TextButton(
-${spaces}  onPressed: () {},
+${spaces}  onPressed: () {
+${spaces}    // Acción del botón
+${spaces}  },
 ${spaces}  child: Text('${(component.properties.text || "Button").replace(/'/g, "\\'")}'),
-${spaces})`
-          break
+${spaces})`;
+          break;
         default:
           buttonWidget = `${spaces}ElevatedButton(
-${spaces}  onPressed: () {},
+${spaces}  onPressed: () {
+${spaces}    // Acción del botón
+${spaces}  },
 ${spaces}  child: Text('${(component.properties.text || "Button").replace(/'/g, "\\'")}'),
-${spaces})`
+${spaces})`;
       }
-
-      return buttonWidget
+      widgetCode = buttonWidget;
+      break;
 
     case COMPONENT_TYPES.CONTAINER:
-      const padding = component.properties.padding || 16
-      const color = component.properties.color || "#FFFFFF"
-      const borderRadius = component.style?.borderRadius || 0
+      const padding = component.properties.padding || 16;
+      const color = component.properties.color || "#FFFFFF";
+      const borderRadius = component.style?.borderRadius || 0;
 
       let containerCode = `${spaces}Container(
 ${spaces}  padding: EdgeInsets.all(${padding}),
-${color !== "#FFFFFF" ? `${spaces}  decoration: BoxDecoration(\n${spaces}    color: Color(0xFF${color.substring(1)}),\n${borderRadius > 0 ? `${spaces}    borderRadius: BorderRadius.circular(${borderRadius}),\n` : ""}${spaces}  ),\n` : borderRadius > 0 ? `${spaces}  decoration: BoxDecoration(\n${spaces}    borderRadius: BorderRadius.circular(${borderRadius}),\n${spaces}  ),\n` : ""}`
+${
+  color !== "#FFFFFF"
+    ? `${spaces}  decoration: BoxDecoration(\n${spaces}    color: Color(0xFF${color.substring(1)}),\n${
+        borderRadius > 0 ? `${spaces}    borderRadius: BorderRadius.circular(${borderRadius}),\n` : ""
+      }${spaces}  ),\n`
+    : borderRadius > 0
+    ? `${spaces}  decoration: BoxDecoration(\n${spaces}    borderRadius: BorderRadius.circular(${borderRadius}),\n${spaces}  ),\n`
+    : ""
+}`;
 
       if (component.children.length > 0) {
         if (component.children.length === 1) {
-          containerCode += `${spaces}  child: ${generateFlutterCode(component.children[0], indent + 2).trim()},\n`
+          containerCode += `${spaces}  child: ${generateFlutterCodeTest(component.children[0], indent + 2).trim()},\n`;
         } else {
           containerCode += `${spaces}  child: Column(
 ${spaces}    children: [
-${component.children.map((child) => generateFlutterCode(child, indent + 6)).join(",\n")}
+${component.children.map((child) => generateFlutterCodeTest(child, indent + 6)).join(",\n")}
 ${spaces}    ],
-${spaces}  ),\n`
+${spaces}  ),\n`;
         }
       }
 
-      containerCode += `${spaces})`
-      return containerCode
-
+      containerCode += `${spaces})`;
+      widgetCode = containerCode;
+      break;
 
     case COMPONENT_TYPES.STACK:
       let stackCode = `${spaces}Stack(
 ${spaces}  alignment: Alignment.${component.properties.alignment || "center"},
-${spaces}  children: [`
+${spaces}  children: [`;
 
       if (component.children.length > 0) {
-        stackCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 4)).join(",\n")}\n${spaces}  `
+        stackCode += `\n${component.children
+          .map((child) => generateFlutterCodeTest(child, indent + 4))
+          .join(",\n")}\n${spaces}  `;
       }
 
       stackCode += `],
-${spaces})`
-      return stackCode
+${spaces})`;
+      widgetCode = stackCode;
+      break;
 
     case COMPONENT_TYPES.CARD:
       let cardCode = `${spaces}Card(
@@ -440,21 +304,24 @@ ${spaces}            fontWeight: FontWeight.bold,
 ${spaces}          ),
 ${spaces}        ),
 ${spaces}        SizedBox(height: 8),
-${spaces}        Text('${(component.properties.content || "Card content goes here").replace(/'/g, "\\'")}'),`
+${spaces}        Text('${(component.properties.content || "Card content goes here").replace(/'/g, "\\'")}'),`;
 
       if (component.children.length > 0) {
-        cardCode += `\n${spaces}        SizedBox(height: 8),`
-        cardCode += `\n${component.children.map((child) => generateFlutterCode(child, indent + 8)).join(",\n")}`
+        cardCode += `\n${spaces}        SizedBox(height: 8),`;
+        cardCode += `\n${component.children.map((child) => generateFlutterCodeTest(child, indent + 8)).join(",\n")}`;
       }
 
       cardCode += `\n${spaces}      ],
 ${spaces}    ),
 ${spaces}  ),
-${spaces})`
-      return cardCode
+${spaces})`;
+      widgetCode = cardCode;
+      break;
 
     case COMPONENT_TYPES.TEXT_FIELD:
-      return `${spaces}TextField(
+      const textFieldId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+      widgetCode = `${spaces}TextField(
+${spaces}  controller: _textController${textFieldId},
 ${spaces}  decoration: InputDecoration(
 ${spaces}    labelText: '${(component.properties.label || "Label").replace(/'/g, "\\'")}',
 ${spaces}    hintText: '${(component.properties.hint || "").replace(/'/g, "\\'")}',
@@ -462,49 +329,69 @@ ${spaces}    border: OutlineInputBorder(
 ${spaces}      borderRadius: BorderRadius.circular(${component.style?.borderRadius || 4}),
 ${spaces}    ),
 ${spaces}  ),
-${spaces})`
+${spaces})`;
+      break;
 
     case COMPONENT_TYPES.CHECKBOX:
-      return `${spaces}Row(
+      const checkboxId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+      widgetCode = `${spaces}Row(
 ${spaces}  children: [
 ${spaces}    Checkbox(
-${spaces}      value: ${component.properties.value ? "true" : "false"},
-${spaces}      onChanged: (value) {},
+${spaces}      value: _checkbox${checkboxId},
+${spaces}      onChanged: (value) {
+${spaces}        setState(() {
+${spaces}          _checkbox${checkboxId} = value ?? false;
+${spaces}        });
+${spaces}      },
 ${spaces}    ),
 ${spaces}    SizedBox(width: 8),
 ${spaces}    Text('${(component.properties.label || "Checkbox").replace(/'/g, "\\'")}'),
 ${spaces}  ],
-${spaces})`
+${spaces})`;
+      break;
 
     case COMPONENT_TYPES.SWITCH:
-      return `${spaces}Switch(
-${spaces}  value: ${component.properties.value ? "true" : "false"},
-${spaces}  onChanged: (value) {},
-${spaces})`
+      const switchId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+      widgetCode = `${spaces}Switch(
+${spaces}  value: _switch${switchId},
+${spaces}  onChanged: (value) {
+${spaces}    setState(() {
+${spaces}      _switch${switchId} = value;
+${spaces}    });
+${spaces}  },
+${spaces})`;
+      break;
 
     case COMPONENT_TYPES.RADIO:
-      return `${spaces}Row(
+      const radioId = component.id.replace(/[^a-zA-Z0-9]/g, "");
+      widgetCode = `${spaces}Row(
 ${spaces}  children: [
 ${spaces}    Radio<String>(
 ${spaces}      value: '${component.properties.value || "option"}',
-${spaces}      groupValue: '${component.properties.groupValue || "option"}',
-${spaces}      onChanged: (value) {},
+${spaces}      groupValue: _radio${radioId},
+${spaces}      onChanged: (value) {
+${spaces}        setState(() {
+${spaces}          _radio${radioId} = value;
+${spaces}        });
+${spaces}      },
 ${spaces}    ),
 ${spaces}    SizedBox(width: 8),
 ${spaces}    Text('${(component.properties.label || "Radio Button").replace(/'/g, "\\'")}'),
 ${spaces}  ],
-${spaces})`
+${spaces})`;
+      break;
 
     case COMPONENT_TYPES.ICON:
-      const iconName = component.properties.icon || "star"
-      return `${spaces}Icon(
+      const iconName = component.properties.icon || "star";
+      widgetCode = `${spaces}Icon(
 ${spaces}  Icons.${iconName},
 ${spaces}  size: ${component.properties.size || 24},
-${component.style?.color ? `${spaces}  color: Color(0xFF${component.style.color.substring(1)}),\n` : ""}${spaces})`
+${component.style?.color ? `${spaces}  color: Color(0xFF${component.style.color.substring(1)}),\n` : ""}${spaces})`;
+      break;
 
     case COMPONENT_TYPES.LIST_VIEW:
-      const scrollDirection = component.properties.scrollDirection || "vertical"
-      const itemCount = component.properties.itemCount || 3
+      const scrollDirection = component.properties.scrollDirection || "vertical";
+      const itemCount = component.properties.itemCount || 3;
 
       let listViewCode = `${spaces}ListView.builder(
 ${spaces}  scrollDirection: Axis.${scrollDirection},
@@ -522,108 +409,47 @@ ${spaces}        child: Text('List Item \${index + 1}'),
 ${spaces}      ),
 ${spaces}    );
 ${spaces}  },
-${spaces})`
+${spaces})`;
 
       if (component.children.length > 0) {
         listViewCode = `${spaces}Column(
 ${spaces}  children: [
 ${spaces}    ${listViewCode.trim()},
-${component.children.map((child) => generateFlutterCode(child, indent + 4)).join(",\n")}
+${component.children.map((child) => generateFlutterCodeTest(child, indent + 4)).join(",\n")}
 ${spaces}  ],
-${spaces})`
+${spaces})`;
       }
 
-      return listViewCode
+      widgetCode = listViewCode;
+      break;
 
     default:
-      return `${spaces}// Unknown component type: ${component.type}`
+      widgetCode = `${spaces}// Unknown component type: ${component.type}`;
   }
-}
 
-// Convert CSS alignment to Flutter alignment
-function convertFlutterAlignment(alignment: string): string {
-  switch (alignment) {
-    case "start":
-      return "start"
-    case "center":
-      return "center"
-    case "end":
-      return "end"
-    case "spaceBetween":
-      return "spaceBetween"
-    case "spaceAround":
-      return "spaceAround"
-    case "spaceEvenly":
-      return "spaceEvenly"
-    default:
-      return "start"
+  if (component.position) {
+    const { x, y } = component.position;
+    const posSpaces = " ".repeat(indent);
+    widgetCode = `${posSpaces}Positioned(
+${posSpaces}  left: ${Math.trunc(x)},
+${posSpaces}  top: ${Math.trunc(y)},
+${posSpaces}  child: SizedBox(
+${posSpaces}    width: ${component.style?.width || "null"},
+${posSpaces}    height: ${component.style?.height || "null"},
+${posSpaces}    child: ${widgetCode
+      .trim()
+      .split("\n")
+      .map((line) => `${posSpaces}      ${line.trim()}`)
+      .join("\n")},
+${posSpaces}  ),
+${posSpaces})`;
   }
-}
 
-// Generate the full Flutter code for the app with proper structure
-/** NO SE ESTA USANDO ESTA FUNCION */
-export function exportFlutterCode(componentTree: ComponentNode): string {
-  const imports = `import 'package:flutter/material.dart';\n\n`
-
-  // Generate a more complete and clean Flutter app structure
-  const mainFunction = `void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter UI Designer App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key}) : super(key: key);
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: ${componentTree.children.length > 0
-      ? componentTree.children.length === 1
-        ? generateFlutterCode(componentTree.children[0], 10).trim()
-        : `Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-${componentTree.children.map((child) => generateFlutterCode(child, 14)).join(",\n")}
-            ],
-          )`
-      : "const Center(\n            child: Text(\n              'No components added',\n              style: TextStyle(fontSize: 16, color: Colors.grey),\n            ),\n          )"
-    }
-        ),
-      ),
-    );
-  }
-}
-`
-
-  return imports + mainFunction
+  return widgetCode;
 }
 
 export function exportFlutterCodeTest(pages: Page[]): string {
-  const imports = `import 'package:flutter/material.dart';\n\n`
+  const imports = `import 'package:flutter/material.dart';\n\n`;
 
   const mainFunction = `
   void main() {
@@ -649,13 +475,10 @@ export function exportFlutterCodeTest(pages: Page[]): string {
   }
 
   ${getPages(pages)}
+`;
 
-`
-
-  return imports + mainFunction
+  return imports + mainFunction;
 }
-
-
 
 export const getPages = (pages: Page[]) => {
   return `
@@ -677,7 +500,7 @@ export const getPages = (pages: Page[]) => {
                     style: TextStyle(color: Colors.white, fontSize: 20),
                   ),
                 ),
-                ${pages.map(generateList).join('\n')}
+                ${pages.map(generateList).join("\n")}
               ],
             ),
           ),
@@ -686,12 +509,11 @@ export const getPages = (pages: Page[]) => {
         }
     }
 
-    ${pages.map(generatePage).join('\n')}
-  `
-}
+    ${pages.map(generatePage).join("\n")}
+  `;
+};
 
 const generateList = (page: Page): string => {
-
   const pageNameCapitalized = getPageNameCapitalized(page);
 
   return `
@@ -706,14 +528,39 @@ const generateList = (page: Page): string => {
         );
       },
     ),
-  `
-}
-
-
+  `;
+};
 
 const generatePage = (page: Page): string => {
   const pageName = getPageNameCapitalized(page);
-  return `
+  const needsState = pageNeedsState(page.componentTree);
+
+  if (needsState) {
+    // Generar StatefulWidget
+    return `
+class ${pageName} extends StatefulWidget {
+  const ${pageName}({super.key});
+
+  @override
+  State<${pageName}> createState() => _${pageName}State();
+}
+
+class _${pageName}State extends State<${pageName}> {
+  // Variables de estado
+${generateStateVariables(page.componentTree, 2)}
+
+  ${generateDisposeMethod(page.componentTree, 2)}
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('${pageName}')),
+      body: ${getBodyContent(page.componentTree)},
+    );
+  }
+}`;
+  } else {
+    // Generar StatelessWidget
+    return `
 class ${pageName} extends StatelessWidget {
   const ${pageName}({super.key});
 
@@ -724,8 +571,8 @@ class ${pageName} extends StatelessWidget {
       body: ${getBodyContent(page.componentTree)},
     );
   }
-}
-`;
+}`;
+  }
 };
 
 // Crea el contenido del body según si hay Positioned
@@ -747,11 +594,9 @@ const getBodyContent = (componentTree: ComponentNode): string => {
   }
 
   // Si alguno tiene posición, usar Stack
-  const hasPositioned = children.some(child => !!child.position);
+  const hasPositioned = children.some((child) => !!child.position);
   if (hasPositioned) {
-    const widgets = children
-      .map(child => generateFlutterCodeTest(child, 12).trim())
-      .join(',\n');
+    const widgets = children.map((child) => generateFlutterCodeTest(child, 12).trim()).join(",\n");
     return `SafeArea(
   child: SingleChildScrollView(
     child: SizedBox(
@@ -778,9 +623,7 @@ const getBodyContent = (componentTree: ComponentNode): string => {
   }
 
   // Varias sin posición: Column normal
-  const childrenWidgets = children
-    .map(child => generateFlutterCodeTest(child, 14))
-    .join(',\n');
+  const childrenWidgets = children.map((child) => generateFlutterCodeTest(child, 14)).join(",\n");
   return `SafeArea(
   child: SingleChildScrollView(
     child: Column(
