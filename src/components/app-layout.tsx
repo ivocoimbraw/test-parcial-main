@@ -16,6 +16,7 @@ import CodeViewer from "@/components/code-viewer";
 import PageSelector from "@/components/page-selector";
 import ChatPanel from "@/components/chat-panel";
 import { Page } from "@/lib/types";
+import { TourButton, TourProvider } from "./tour-provider";
 
 export default function AppLayout() {
   const { toast } = useToast();
@@ -76,54 +77,75 @@ export default function AppLayout() {
   };
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="flex h-[calc(100vh-4rem)]">
-        {/* Sidebar */}
-        <Sidebar />
-
-        {/* Main Content */}
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex items-center justify-between p-2 border-b bg-background">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={undo} disabled={!canUndo}>
-                <Undo className="w-4 h-4 mr-1" />
-                Undo
-              </Button>
-              <Button variant="outline" size="sm" onClick={redo} disabled={!canRedo}>
-                <Redo className="w-4 h-4 mr-1" />
-                Redo
-              </Button>
-            </div>
-            <PageSelector />
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleSaveDesign}>
-                <Save className="w-4 h-4 mr-1" />
-                Save
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => document.getElementById("load-design")?.click()}>
-                <Upload className="w-4 h-4 mr-1" />
-                Load Page
-                <input id="load-design" type="file" accept=".json" className="hidden" onChange={handleLoadDesign} />
-              </Button>
-              <Button variant="outline" size="sm" onClick={toggleCodeView}>
-                <Code className="w-4 h-4 mr-1" />
-                {codeViewOpen ? "Hide Code" : "View Code"}
-              </Button>
-              <Button variant="outline" size="sm" onClick={toggleChatView}>
-                <MessageSquare className="w-4 h-4 mr-1" />
-                {chatOpen ? "Hide Chat" : "Chat"}
-              </Button>
-            </div>
+    <TourProvider>
+      <DndProvider backend={HTML5Backend}>
+        <div className="flex h-[calc(100vh-4rem)] main-container">
+          {/* Sidebar */}
+          <div data-tour="sidebar">
+            <Sidebar />
           </div>
 
-          <div className="flex flex-1 overflow-hidden bg-[#0a0f14]">
-            <div className="flex flex-col flex-1">
-              {codeViewOpen ? <CodeViewer /> : chatOpen ? <ChatPanel /> : <PhonePreview />}
+          {/* Main Content */}
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex items-center justify-between p-2 border-b bg-background">
+              <div className="flex items-center gap-2" data-tour="undo-redo">
+                <Button variant="outline" size="sm" onClick={undo} disabled={!canUndo}>
+                  <Undo className="w-4 h-4 mr-1" />
+                  Undo
+                </Button>
+                <Button variant="outline" size="sm" onClick={redo} disabled={!canRedo}>
+                  <Redo className="w-4 h-4 mr-1" />
+                  Redo
+                </Button>
+              </div>
+
+              <div data-tour="page-selector">
+                <PageSelector />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" data-tour="save-load">
+                  <Button variant="outline" size="sm" onClick={handleSaveDesign}>
+                    <Save className="w-4 h-4 mr-1" />
+                    Save
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => document.getElementById("load-design")?.click()}>
+                    <Upload className="w-4 h-4 mr-1" />
+                    Load Page
+                    <input id="load-design" type="file" accept=".json" className="hidden" onChange={handleLoadDesign} />
+                  </Button>
+                </div>
+
+                <div data-tour="code-viewer">
+                  <Button variant="outline" size="sm" onClick={toggleCodeView}>
+                    <Code className="w-4 h-4 mr-1" />
+                    {codeViewOpen ? "Hide Code" : "View Code"}
+                  </Button>
+                </div>
+
+                <div data-tour="chat-panel">
+                  <Button variant="outline" size="sm" onClick={toggleChatView}>
+                    <MessageSquare className="w-4 h-4 mr-1" />
+                    {chatOpen ? "Hide Chat" : "Chat"}
+                  </Button>
+                </div>
+
+                {/* Tour Button */}
+                <TourButton />
+              </div>
             </div>
-            <PropertyPanel />
+
+            <div className="flex flex-1 overflow-hidden bg-[#0a0f14]">
+              <div className="flex flex-col flex-1" data-tour="phone-preview">
+                {codeViewOpen ? <CodeViewer /> : chatOpen ? <ChatPanel /> : <PhonePreview />}
+              </div>
+              <div data-tour="property-panel">
+                <PropertyPanel />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </DndProvider>
+      </DndProvider>
+    </TourProvider>
   );
 }

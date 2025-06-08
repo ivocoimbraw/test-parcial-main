@@ -82,9 +82,6 @@ export default function PhonePreview() {
           <Toggle pressed={showFrame} onPressedChange={setShowFrame} size="sm" aria-label="Toggle device frame">
             <Smartphone className="h-4 w-4" />
           </Toggle>
-          {/* <Toggle pressed={showGrid} onPressedChange={setShowGrid} size="sm" aria-label="Toggle grid">
-            <Grid3X3 className="h-4 w-4" />
-          </Toggle> */}
         </div>
         <div className="flex items-center gap-2">
           <Minimize className="h-4 w-4 text-gray-500" />
