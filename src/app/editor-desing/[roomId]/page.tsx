@@ -1,20 +1,21 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
 import AppLayout from "@/components/app-layout";
 import Navbar from "@/components/navbar";
-import { useAuthStore } from "@/lib/useAuthStore";
+
 import { API_ROUTES } from "@/routes/api.routes";
 import { useDesignerStore } from "@/lib/store";
 import { useStompSync } from "@/hooks/useStompSync";
 import { Page } from "@/lib/types";
+import { Save } from "lucide-react";
 
 interface RoomData {
   id: number;
   name: string;
   datosJson: string;
   createdAt: string;
-  // Agrega otros campos según tu backend
 }
 
 function RoomPage() {
@@ -24,6 +25,7 @@ function RoomPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [roomData, setRoomData] = useState<RoomData | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const {
     setComponentTree,
@@ -57,7 +59,6 @@ function RoomPage() {
           return;
         }
 
-        // Hacer la petición al backend para obtener los datos de la sala
         const response = await fetch(`${API_ROUTES.GET_ROOM_BY_ID.url}/${roomId}`, {
           method: API_ROUTES.GET_ROOM_BY_ID.method || "GET",
           headers: {
@@ -73,19 +74,15 @@ function RoomPage() {
         const roomData: RoomData = await response.json();
         setRoomData(roomData);
 
-        // Parsear y cargar los datos JSON
         if (roomData.datosJson && roomData.datosJson !== "string") {
           try {
             const parsedData = JSON.parse(roomData.datosJson);
 
-            // Verificar si parsedData tiene la estructura esperada
             if (parsedData && typeof parsedData === "object") {
-              // Si tiene páginas, cargarlas
               if (parsedData.pages && Array.isArray(parsedData.pages)) {
                 const pages = parsedData.pages as Page[];
                 initializePages(pages);
               } else if (parsedData.componentTree) {
-                // Si solo tiene componentTree, cargarlo directamente
                 console.log("Entro al este if", pages);
                 setComponentTree(parsedData.componentTree);
               } else {
@@ -108,17 +105,22 @@ function RoomPage() {
     fetchRoomData();
   }, [roomId, setComponentTree, addPageInterface, setCurrentPage]);
 
-  // Función para guardar cambios automáticamente (opcional)
   const saveRoomData = async () => {
     if (!roomId || !roomData) return;
 
     try {
+      setSaving(true);
+
+      const loadingToast = toast.loading("Guardando proyecto...");
+
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token) {
+        toast.error("Token de autenticación no encontrado");
+        return;
+      }
 
       const dataToSave = {
         pages: pages,
-        // Puedes agregar más datos aquí si necesitas
       };
 
       const response = await fetch(`${API_ROUTES.UPDATE_ROOM.url}/${roomId}`, {
@@ -137,16 +139,61 @@ function RoomPage() {
         throw new Error("Error al guardar los datos");
       }
 
+      toast.dismiss(loadingToast);
+      toast.success("¡Proyecto guardado exitosamente!", {
+        duration: 3000,
+        icon: "✅",
+      });
+
       console.log("Datos guardados correctamente");
     } catch (error) {
       console.error("Error saving room data:", error);
+      toast.error("Error al guardar el proyecto. Inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Auto-guardar cada 30 segundos (opcional)
   useEffect(() => {
    /*  if (!loading && roomData) {
       const interval = setInterval(saveRoomData, 30000);
+    if (!loading && roomData) {
+      const interval = setInterval(async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) return;
+
+          const dataToSave = {
+            pages: pages,
+          };
+
+          const response = await fetch(`${API_ROUTES.UPDATE_ROOM.url}/${roomId}`, {
+            method: API_ROUTES.UPDATE_ROOM.method,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              id: roomId,
+              datosJson: JSON.stringify(dataToSave),
+            }),
+          });
+
+          if (response.ok) {
+            toast.success("Autoguardado", {
+              duration: 1500,
+              position: "bottom-right",
+              style: {
+                fontSize: "12px",
+                padding: "6px 12px",
+              },
+            });
+          }
+        } catch (error) {
+          console.error("Error en autoguardado:", error);
+        }
+      }, 30000);
+
       return () => clearInterval(interval);
     } */
   }, [loading, roomData, pages]);
@@ -187,19 +234,33 @@ function RoomPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <Toaster position="top-right" reverseOrder={false} />
       <Navbar />
       <main className="flex-1">
         <AppLayout />
       </main>
 
-      {/* Botón para guardar manualmente (opcional) */}
+      {/* Botón para guardar manualmente */}
       <div className="fixed top-4 right-4 z-10">
         <button
           onClick={saveRoomData}
-          className="relative group px-4 py-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-400/30 rounded-xl text-red-300 hover:text-white transition-all duration-300 backdrop-blur-sm"
+          disabled={saving}
+          className={`relative group px-4 py-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-400/30 rounded-xl text-red-300 hover:text-white transition-all duration-300 backdrop-blur-sm ${
+            saving ? "opacity-50 cursor-not-allowed" : ""
+          }`}
           title="Guardar cambios"
         >
-          Guardar
+          <span className="relative z-10 flex items-center space-x-2">
+            <Save className={`w-4 h-4 ${saving ? "animate-spin" : ""}`} />
+            <span>{saving ? "Guardando..." : "Save"}</span>
+          </span>
+
+          <div
+            className="absolute inset-0
+                    bg-gradient-to-r from-red-500/0 to-pink-500/0
+                    group-hover:from-red-500/20 group-hover:to-pink-500/20
+                    rounded-xl transition-all duration-300"
+          />
         </button>
       </div>
     </div>
