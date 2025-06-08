@@ -18,8 +18,8 @@ export function SignUpForm({ className, ...props }: React.ComponentProps<"div">)
   const [showPassword, setShowPassword] = useState(false);
 
   const [data, setData] = useState({
-    name: "",
-    email: "",
+    nombre: "",
+    username: "",
     password: "",
   });
 
@@ -45,7 +45,7 @@ export function SignUpForm({ className, ...props }: React.ComponentProps<"div">)
         return;
       }
 
-      await login(data.email, data.password);
+      await login(data.username, data.password);
 
       const { user, error } = useAuthStore.getState();
       let token = null;
@@ -53,31 +53,11 @@ export function SignUpForm({ className, ...props }: React.ComponentProps<"div">)
         token = localStorage.getItem("token");
       }
 
-      //   if (user && !error && token) {
-      //     const projectResponse = await fetch(API_ROUTES.PROJECT_CREATE.url, {
-      //       method: API_ROUTES.PROJECT_CREATE.method,
-      //       headers: {
-      //         "content-type": "application/json",
-      //         Authorization: `Bearer ${token}`,
-      //       },
-      //       body: JSON.stringify({
-      //         name: `Proyecto de ${user.name}`,
-      //       }),
-      //     });
-
-      //     const projectData = await projectResponse.json();
-
-      //     if (projectResponse.ok && projectData.shareId) {
-      //       toast("Successful Register ", {
-      //         description: "Now you can start collaborating with your teammates.",
-      //       });
-      //       router.push(`/grapesjs/${projectData.shareId}`);
-      //     } else {
-      //       toast("Error register", {
-      //         description: "Please try again later.",
-      //       });
-      //     }
-      //   }
+      if (user && !error && token) {
+        router.push(`/welcome`);
+      } else {
+        toast("Error register", {});
+      }
     } catch (err) {
       console.error("Error:", err);
       toast("Error ", {
@@ -99,10 +79,10 @@ export function SignUpForm({ className, ...props }: React.ComponentProps<"div">)
               <div className="grid gap-3">
                 <Label htmlFor="name">Name</Label>
                 <Input
-                  id="name"
+                  id="nombre"
                   type="text"
-                  name="name"
-                  value={data.name}
+                  name="nombre"
+                  value={data.nombre}
                   onChange={handleChange}
                   placeholder="User Name"
                   required
@@ -111,10 +91,10 @@ export function SignUpForm({ className, ...props }: React.ComponentProps<"div">)
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
                 <Input
-                  id="email"
+                  id="username"
                   type="email"
-                  name="email"
-                  value={data.email}
+                  name="username"
+                  value={data.username}
                   onChange={handleChange}
                   placeholder="m@example.com"
                   required
