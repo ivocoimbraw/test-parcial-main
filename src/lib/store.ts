@@ -15,6 +15,10 @@ interface DesignerState {
   historyIndex: number
   customComponents: ComponentNode[]
 
+  updateComponentTest: (component: any) => void
+  setComponentTreeTest: (tree: any) => void
+  setCurrentPageTest: (id: string) => void
+
   // Page actions
   addPage: (name: string) => void
   addPageInterface: (newPage: Page) => void
@@ -69,6 +73,17 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
   customComponents: [],
   canUndo: false,
   canRedo: false,
+
+
+  updateComponentTest: (component: any) => {
+    console.log('[STORE] Componente actualizado:', component);
+  },
+  setComponentTreeTest: (tree: any) => {
+    console.log('[STORE] Árbol actualizado:', tree);
+  },
+  setCurrentPageTest: (id: string) => {
+    console.log('[STORE] Página actual:', id);
+  },
 
   // Helper function to save state to history
   saveToHistory: () => {
