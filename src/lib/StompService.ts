@@ -1,8 +1,9 @@
 // lib/stompService.ts
 import { Client, IMessage } from '@stomp/stompjs';
+import { ActionType } from './types';
 
 type Action = {
-	type: string;
+	type: ActionType;
 	payload?: any;
 };
 
@@ -13,7 +14,7 @@ type IncomingMessage = {
 
 type Listener = (message: {
 	senderId: string;
-	type: string;
+	type: ActionType;
 	payload: any;
 }) => void;
 
@@ -43,7 +44,6 @@ class StompService {
 				this.client!.subscribe(`/topic/updates/${roomId}`, (message: IMessage) => {
 					const incoming: IncomingMessage = JSON.parse(message.body);
 					if (incoming.senderId !== this.clientId) {
-						console.log('[STOMP] Acción remota recibida:', incoming.action);
 						this.listeners.forEach((listener) =>
 							listener({
 								senderId: incoming.senderId,

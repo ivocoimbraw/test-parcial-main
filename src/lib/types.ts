@@ -22,3 +22,13 @@ export interface Page {
   name: string;
   componentTree: ComponentNode;
 }
+
+export type ActionType =
+  | 'UPDATE_COMPONENT'
+  | 'UPDATE_COMPONENT_PROPERTY'
+  | 'DELETE_COMPONENT'
+  | 'ADD_COMPONENT'
+  | 'MOVE_COMPONENT'
+  | 'ADD_PAGE'
+  | 'DELETE_PAGE';
+

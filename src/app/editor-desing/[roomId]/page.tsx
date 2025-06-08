@@ -6,6 +6,8 @@ import Navbar from "@/components/navbar";
 import { useAuthStore } from "@/lib/useAuthStore";
 import { API_ROUTES } from "@/routes/api.routes";
 import { useDesignerStore } from "@/lib/store";
+import { useStompSync } from "@/hooks/useStompSync";
+import { Page } from "@/lib/types";
 
 interface RoomData {
   id: number;
@@ -28,9 +30,12 @@ function RoomPage() {
     pages,
     addPageInterface,
     setCurrentPage,
+    initializePages,
     // Limpiar el estado actual
   } = useDesignerStore();
 
+  useStompSync(roomId);
+  
   useEffect(() => {
     const fetchRoomData = async () => {
       console.log(roomId);
@@ -71,34 +76,14 @@ function RoomPage() {
         // Parsear y cargar los datos JSON
         if (roomData.datosJson && roomData.datosJson !== "string") {
           try {
-            console.log("es despues del if", roomData.datosJson);
             const parsedData = JSON.parse(roomData.datosJson);
 
             // Verificar si parsedData tiene la estructura esperada
             if (parsedData && typeof parsedData === "object") {
               // Si tiene páginas, cargarlas
               if (parsedData.pages && Array.isArray(parsedData.pages)) {
-                // Limpiar páginas actuales (excepto la primera que es default)
-                // y cargar las páginas guardadas
-                parsedData.pages.forEach((page: any, index: number) => {
-                  if (index === 0) {
-                    // Si es la primera página, actualizar la página actual
-                    setComponentTree(
-                      page.componentTree || {
-                        id: "root",
-                        type: "root",
-                        properties: {},
-                        children: [],
-                        style: {},
-                        position: { x: 0, y: 0 },
-                      }
-                    );
-                    setCurrentPage(page.id);
-                  } else {
-                    // Agregar páginas adicionales
-                    addPageInterface(page);
-                  }
-                });
+                const pages = parsedData.pages as Page[];
+                initializePages(pages);
               } else if (parsedData.componentTree) {
                 // Si solo tiene componentTree, cargarlo directamente
                 console.log("Entro al este if", pages);
@@ -116,7 +101,6 @@ function RoomPage() {
         console.error("Error fetching room data:", err);
         setError(err instanceof Error ? err.message : "Error desconocido");
       } finally {
-        console.log(pages);
         setLoading(false);
       }
     };
@@ -161,10 +145,10 @@ function RoomPage() {
 
   // Auto-guardar cada 30 segundos (opcional)
   useEffect(() => {
-    if (!loading && roomData) {
+   /*  if (!loading && roomData) {
       const interval = setInterval(saveRoomData, 30000);
       return () => clearInterval(interval);
-    }
+    } */
   }, [loading, roomData, pages]);
 
   if (loading) {

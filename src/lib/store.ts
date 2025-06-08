@@ -3,7 +3,8 @@
 import { create } from "zustand"
 import { v4 as uuidv4 } from "uuid"
 import type { ComponentNode, Page } from "@/lib/types"
-import { pages } from "next/dist/build/templates/app-page"
+import stompService from "./StompService"
+import { ACTION_TYPES } from "./constants"
 
 interface DesignerState {
   pages: Page[]
@@ -15,9 +16,17 @@ interface DesignerState {
   historyIndex: number
   customComponents: ComponentNode[]
 
-  updateComponentTest: (component: any) => void
-  setComponentTreeTest: (tree: any) => void
-  setCurrentPageTest: (id: string) => void
+  // Remote actions (called from WebSocket)
+  updateComponentRemote: (component: any) => void
+  updateComponentPropertyRemote: (id: string, property: string, value: any) => void
+  addComponentRemote: (newComponent: ComponentNode, pageId: string, parentId: string | null) => void
+  deleteComponentRemote: (componentId: string, pageId: string) => void
+  addPageRemote: (newPage: Page) => void
+  deletePageRemote: (pageId: string) => void
+  moveComponentRemote: (componentId: string, x: number, y: number, pageId: string) => void
+
+  // Initialization
+  initializePages: (pages: Page[], currentPageId?: string) => void
 
   // Page actions
   addPage: (name: string) => void
@@ -47,6 +56,207 @@ interface DesignerState {
   setComponentTree: (tree: ComponentNode) => void
 }
 
+// === UTILITY FUNCTIONS (Separated Logic) ===
+
+const cloneComponent = (component: ComponentNode): ComponentNode => {
+  return {
+    ...component,
+    id: uuidv4(),
+    children: component.children.map((child) => cloneComponent(child)),
+  }
+}
+
+const findComponent = (tree: ComponentNode, id: string): ComponentNode | null => {
+  if (tree.id === id) {
+    return tree
+  }
+
+  for (const child of tree.children) {
+    const found = findComponent(child, id)
+    if (found) {
+      return found
+    }
+  }
+
+  return null
+}
+
+const findParent = (tree: ComponentNode, id: string): ComponentNode | null => {
+  for (const child of tree.children) {
+    if (child.id === id) {
+      return tree
+    }
+
+    const found = findParent(child, id)
+    if (found) {
+      return found
+    }
+  }
+
+  return null
+}
+
+const addComponentToTree = (tree: ComponentNode, newComponent: ComponentNode, parentId: string | null): ComponentNode => {
+  const newTree = JSON.parse(JSON.stringify(tree))
+
+  if (!parentId) {
+    // Add to root level
+    newTree.children.push(newComponent)
+  } else {
+    // Find parent and add to it
+    const addToParent = (node: ComponentNode): boolean => {
+      if (node.id === parentId) {
+        node.children.push(newComponent)
+        return true
+      }
+
+      for (const child of node.children) {
+        if (addToParent(child)) {
+          return true
+        }
+      }
+
+      return false
+    }
+
+    addToParent(newTree)
+  }
+
+  return newTree
+}
+
+const updateComponentInTree = (tree: ComponentNode, componentNode: ComponentNode): ComponentNode => {
+  const newTree = JSON.parse(JSON.stringify(tree))
+
+  const updateNode = (node: ComponentNode): boolean => {
+    if (node.id === componentNode.id) {
+      Object.assign(node, componentNode)
+      return true
+    }
+
+    for (const child of node.children) {
+      if (updateNode(child)) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  updateNode(newTree)
+  return newTree
+}
+
+const deleteComponentFromTree = (tree: ComponentNode, id: string): ComponentNode => {
+  const newTree = JSON.parse(JSON.stringify(tree))
+
+  const deleteFromParent = (node: ComponentNode) => {
+    node.children = node.children.filter((child) => {
+      if (child.id === id) {
+        return false
+      }
+
+      deleteFromParent(child)
+      return true
+    })
+  }
+
+  deleteFromParent(newTree)
+  return newTree
+}
+
+const updateComponentPropertyInTree = (tree: ComponentNode, id: string, property: string, value: any): ComponentNode => {
+  const newTree = JSON.parse(JSON.stringify(tree))
+  const updateProperty = (node: ComponentNode): boolean => {
+    if (node.id === id) {
+      // Handle nested properties like "style.width"
+      if (property.includes(".")) {
+        const [obj, prop] = property.split(".")
+        if (!node[obj]) {
+          node[obj] = {}
+        }
+        node[obj][prop] = value
+      } else {
+        node.properties[property] = value
+      }
+      return true
+    }
+
+    for (const child of node.children) {
+      if (updateProperty(child)) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  updateProperty(newTree)
+  return newTree
+}
+
+const updateComponentPositionInTree = (tree: ComponentNode, id: string, x: number, y: number): ComponentNode => {
+  const newTree = JSON.parse(JSON.stringify(tree))
+
+  const updatePosition = (node: ComponentNode): boolean => {
+    if (node.id === id) {
+      node.position = { x, y }
+      return true
+    }
+
+    for (const child of node.children) {
+      if (updatePosition(child)) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  updatePosition(newTree)
+  return newTree
+}
+
+const generateUniqueName = (baseName: string, existingNames: string[]): string => {
+  if (!existingNames.includes(baseName)) return baseName
+
+  let suffix = 1
+  let newName = `${baseName}${suffix}`
+  while (existingNames.includes(newName)) {
+    suffix++
+    newName = `${baseName}${suffix}`
+  }
+  return newName
+}
+
+const getInitialState = (pages?: Page[]) => {
+  if (pages && pages.length > 0) {
+    const firstPage = pages[0]
+    return {
+      pages,
+      currentPageId: firstPage.id,
+      componentTree: JSON.parse(JSON.stringify(firstPage.componentTree)),
+      history: [JSON.parse(JSON.stringify(firstPage.componentTree))],
+    }
+  }
+
+  // Default state if no pages provided
+  const defaultPage: Page = {
+    id: uuidv4(),
+    name: "Home",
+    componentTree: { ...initialComponentTree },
+  }
+
+  return {
+    pages: [defaultPage],
+    currentPageId: defaultPage.id,
+    componentTree: { ...initialComponentTree },
+    history: [{ ...initialComponentTree }],
+  }
+}
+
+// === INITIAL STATE ===
+
 const initialComponentTree: ComponentNode = {
   id: "root",
   type: "root",
@@ -62,6 +272,8 @@ const initialPage: Page = {
   componentTree: { ...initialComponentTree },
 }
 
+// === ZUSTAND STORE ===
+
 export const useDesignerStore = create<DesignerState>((set, get) => ({
   pages: [initialPage],
   currentPageId: initialPage.id,
@@ -74,50 +286,260 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
   canUndo: false,
   canRedo: false,
 
-
-  updateComponentTest: (component: any) => {
-    console.log('[STORE] Componente actualizado:', component);
-  },
-  setComponentTreeTest: (tree: any) => {
-    console.log('[STORE] Árbol actualizado:', tree);
-  },
-  setCurrentPageTest: (id: string) => {
-    console.log('[STORE] Página actual:', id);
-  },
-
   // Helper function to save state to history
   saveToHistory: () => {
-    const { componentTree, history, historyIndex } = get()
+    const { componentTree, history, historyIndex, pages, currentPageId } = get()
 
     // Create a new history array that includes only the entries up to the current index
-    // This removes any "future" history entries when making a new change after undoing
     const newHistory = history.slice(0, historyIndex + 1)
-
-    // Add the current state to history
     newHistory.push(JSON.parse(JSON.stringify(componentTree)))
+
+    // Update the current page's component tree
+    const updatedPages = pages.map((page) =>
+      page.id === currentPageId ? { ...page, componentTree: JSON.parse(JSON.stringify(componentTree)) } : page,
+    )
 
     set({
       history: newHistory,
       historyIndex: newHistory.length - 1,
       canUndo: newHistory.length > 1,
       canRedo: false,
+      pages: updatedPages,
     })
-
-    // Update the current page's component tree
-    const { pages, currentPageId } = get()
-    const updatedPages = pages.map((page) =>
-      page.id === currentPageId ? { ...page, componentTree: JSON.parse(JSON.stringify(componentTree)) } : page,
-    )
-    set({ pages: updatedPages })
   },
 
-  // Page management
+  initializePages: (pages: Page[], currentPageId?: string) => {
+    // Validate that pages array is not empty
+    if (!pages || pages.length === 0) {
+      console.warn('Cannot initialize with empty pages array')
+      return
+    }
+
+    // Determine which page should be current
+    let targetPageId = currentPageId
+    if (!targetPageId || !pages.find(p => p.id === targetPageId)) {
+      targetPageId = pages[0].id
+    }
+
+    const currentPage = pages.find(p => p.id === targetPageId)!
+
+    set({
+      pages: JSON.parse(JSON.stringify(pages)), // Deep clone to avoid mutations
+      currentPageId: targetPageId,
+      componentTree: JSON.parse(JSON.stringify(currentPage.componentTree)),
+      selectedComponentId: null,
+      clipboard: null,
+      history: [JSON.parse(JSON.stringify(currentPage.componentTree))],
+      historyIndex: 0,
+      customComponents: [],
+      canUndo: false,
+      canRedo: false,
+    })
+  },
+
+  // === REMOTE ACTIONS ===
+
+  addComponentRemote: (newComponent: ComponentNode, pageId: string, parentId: string | null) => {
+    set((state) => {
+      // Find the target page
+      const targetPageIndex = state.pages.findIndex(page => page.id === pageId)
+      if (targetPageIndex === -1) {
+        console.warn(`Page with id ${pageId} not found`)
+        return state
+      }
+
+      const targetPage = state.pages[targetPageIndex]
+
+      // Add component to the page's component tree
+      const updatedComponentTree = addComponentToTree(targetPage.componentTree, newComponent, parentId)
+
+      // Update the pages array
+      const updatedPages = [...state.pages]
+      updatedPages[targetPageIndex] = {
+        ...targetPage,
+        componentTree: updatedComponentTree
+      }
+
+      // If this is the current page, update the current component tree as well
+      const newState: Partial<typeof state> = {
+        pages: updatedPages
+      }
+
+      if (pageId === state.currentPageId) {
+        newState.componentTree = updatedComponentTree
+        newState.selectedComponentId = newComponent.id
+      }
+
+      return newState
+    })
+
+    // Save to history if it's the current page
+    const { currentPageId } = get()
+    if (pageId === currentPageId) {
+      setTimeout(() => get().saveToHistory(), 0)
+    }
+  },
+
+  deleteComponentRemote: (componentId: string, pageId: string) => {
+    set((state) => {
+      // Find the target page
+      const targetPageIndex = state.pages.findIndex(page => page.id === pageId)
+      if (targetPageIndex === -1) {
+        console.warn(`Page with id ${pageId} not found`)
+        return state
+      }
+
+      const targetPage = state.pages[targetPageIndex]
+
+      // Delete component from the page's component tree
+      const updatedComponentTree = deleteComponentFromTree(targetPage.componentTree, componentId)
+
+      // Update the pages array
+      const updatedPages = [...state.pages]
+      updatedPages[targetPageIndex] = {
+        ...targetPage,
+        componentTree: updatedComponentTree
+      }
+
+      // If this is the current page, update the current component tree as well
+      const newState: Partial<typeof state> = {
+        pages: updatedPages
+      }
+
+      if (pageId === state.currentPageId) {
+        newState.componentTree = updatedComponentTree
+        // Clear selection if the deleted component was selected
+        if (state.selectedComponentId === componentId) {
+          newState.selectedComponentId = null
+        }
+      }
+
+      return newState
+    })
+
+    // Save to history if it's the current page
+    const { currentPageId } = get()
+    if (pageId === currentPageId) {
+      setTimeout(() => get().saveToHistory(), 0)
+    }
+  },
+
+  addPageRemote: (newPage: Page) => {
+    set((state) => {
+      const existingNames = state.pages.map((page) => page.name)
+      const uniqueName = generateUniqueName(newPage.name, existingNames)
+
+      const finalPage = {
+        ...newPage,
+        name: uniqueName,
+      }
+
+      return {
+        pages: [...state.pages, finalPage],
+      }
+    })
+  },
+
+  deletePageRemote: (pageId: string) => {
+    set((state) => {
+      const newPages = state.pages.filter((page) => page.id !== pageId)
+
+      // If we're deleting the current page, switch to another page
+      if (pageId === state.currentPageId && newPages.length > 0) {
+        const newCurrentPage = newPages[0]
+        return {
+          pages: newPages,
+          currentPageId: newCurrentPage.id,
+          componentTree: JSON.parse(JSON.stringify(newCurrentPage.componentTree)),
+          selectedComponentId: null,
+          history: [JSON.parse(JSON.stringify(newCurrentPage.componentTree))],
+          historyIndex: 0,
+          canUndo: false,
+          canRedo: false,
+        }
+      }
+
+      return {
+        pages: newPages,
+      }
+    })
+  },
+
+  moveComponentRemote: (componentId: string, x: number, y: number, pageId: string) => {
+    set((state) => {
+      // Find the target page
+      const targetPageIndex = state.pages.findIndex(page => page.id === pageId)
+      if (targetPageIndex === -1) {
+        console.warn(`Page with id ${pageId} not found`)
+        return state
+      }
+
+      const targetPage = state.pages[targetPageIndex]
+
+      // Update component position in the page's component tree
+      const updatedComponentTree = updateComponentPositionInTree(targetPage.componentTree, componentId, x, y)
+
+      // Update the pages array
+      const updatedPages = [...state.pages]
+      updatedPages[targetPageIndex] = {
+        ...targetPage,
+        componentTree: updatedComponentTree
+      }
+
+      // If this is the current page, update the current component tree as well
+      const newState: Partial<typeof state> = {
+        pages: updatedPages
+      }
+
+      if (pageId === state.currentPageId) {
+        newState.componentTree = updatedComponentTree
+      }
+
+      return newState
+    })
+
+    // Save to history if it's the current page
+    const { currentPageId } = get()
+    if (pageId === currentPageId) {
+      setTimeout(() => get().saveToHistory(), 0)
+    }
+  },
+
+  updateComponentRemote: (componentNode: ComponentNode) => {
+
+    set((state) => {
+      const newTree = updateComponentInTree(state.componentTree, componentNode)
+      return { componentTree: newTree }
+    })
+
+    setTimeout(() => get().saveToHistory(), 0)
+  },
+
+  
+  
+  updateComponentPropertyRemote: (id: string, property: string, value: any) => {
+    set((state) => {
+      const newTree = updateComponentPropertyInTree(state.componentTree, id, property, value)
+      return { componentTree: newTree }
+    })
+
+    setTimeout(() => get().saveToHistory(), 0)
+  },
+
+  // === PAGE MANAGEMENT ===
+
   addPage: (name) => {
     const newPage: Page = {
       id: uuidv4(),
       name,
       componentTree: { ...initialComponentTree },
     }
+
+    // Send to WebSocket
+    stompService.send({
+      type: ACTION_TYPES.ADD_PAGE,
+      payload: newPage,
+    })
 
     set((state) => ({
       pages: [...state.pages, newPage],
@@ -133,30 +555,13 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
 
   addPageInterface: (newPage) => {
     set((state) => {
-      // 1. Obtener todos los nombres existentes
-      const existingNames = state.pages.map((page) => page.name);
+      const existingNames = state.pages.map((page) => page.name)
+      const uniqueName = generateUniqueName(newPage.name, existingNames)
 
-      // 2. Función para generar nombre único
-      const generateUniqueName = (baseName: string): string => {
-        if (!existingNames.includes(baseName)) return baseName;
-
-        let suffix = 1;
-        let newName = `${baseName}${suffix}`;
-        while (existingNames.includes(newName)) {
-          suffix++;
-          newName = `${baseName}${suffix}`;
-        }
-        return newName;
-      };
-
-      // 3. Generar nombre único si es necesario
-      const uniqueName = generateUniqueName(newPage.name);
-
-      // 4. Clonar y actualizar el nombre de la página nueva
       const finalPage = {
         ...newPage,
         name: uniqueName,
-      };
+      }
 
       return {
         pages: [...state.pages, finalPage],
@@ -167,8 +572,8 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
         historyIndex: 0,
         canUndo: false,
         canRedo: false,
-      };
-    });
+      }
+    })
   },
 
   renamePage: (id, name) => {
@@ -178,10 +583,15 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
   },
 
   deletePage: (id) => {
+    // Send to WebSocket
+    stompService.send({
+      type: ACTION_TYPES.DELETE_PAGE,
+      payload: { pageId: id },
+    })
+
     set((state) => {
       const newPages = state.pages.filter((page) => page.id !== id)
 
-      // If we're deleting the current page, switch to another page
       let newCurrentPageId = state.currentPageId
       let newComponentTree = state.componentTree
 
@@ -225,245 +635,130 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     return pages.find((page) => page.id === currentPageId)
   },
 
-  // Find a component by ID in the tree
-  findComponent: (tree: ComponentNode, id: string): ComponentNode | null => {
-    if (tree.id === id) {
-      return tree
-    }
+  // === COMPONENT ACTIONS (LOCAL) ===
 
-    for (const child of tree.children) {
-      const found = get().findComponent(child, id)
-      if (found) {
-        return found
-      }
-    }
-
-    return null
-  },
-
-  // Find a component's parent by ID
-  findParent: (tree: ComponentNode, id: string): ComponentNode | null => {
-    for (const child of tree.children) {
-      if (child.id === id) {
-        return tree
-      }
-
-      const found = get().findParent(child, id)
-      if (found) {
-        return found
-      }
-    }
-
-    return null
-  },
-
-  // Clone a component tree
-  cloneComponent: (component: ComponentNode): ComponentNode => {
-    return {
-      ...component,
-      id: uuidv4(),
-      children: component.children.map((child) => get().cloneComponent(child)),
-    }
-  },
-
-  // Add a component to the tree
   addComponent: (type, properties, parentId, style) => {
+    const newComponent: ComponentNode = {
+      id: uuidv4(),
+      type,
+      properties,
+      children: [],
+      style: style,
+      position: { x: 0, y: 0 },
+    }
 
+    // Send to WebSocket
+    stompService.send({
+      type: ACTION_TYPES.ADD_COMPONENT,
+      payload: {
+        newComponent,
+        pageId: get().currentPageId,
+        parentId
+      },
+    })
 
+    // Apply locally
     set((state) => {
-      const newTree = JSON.parse(JSON.stringify(state.componentTree))
-      const newComponent: ComponentNode = {
-        id: uuidv4(),
-        type,
-        properties,
-        children: [],
-        style: style,
-        position: { x: 0, y: 0 },
-      }
+      const newTree = addComponentToTree(state.componentTree, newComponent, parentId)
 
-      // If no parent ID is provided, add to the root
-      if (!parentId) {
-        newTree.children.push(newComponent)
-      } else {
-        // Find the parent component
-        const addToParent = (node: ComponentNode) => {
-          if (node.id === parentId) {
-            node.children.push(newComponent)
-            return true
-          }
-
-          for (const child of node.children) {
-            if (addToParent(child)) {
-              return true
-            }
-          }
-
-          return false
-        }
-
-        addToParent(newTree)
-      }
-
-      // Save to history
-      const newState = {
+      return {
         componentTree: newTree,
         selectedComponentId: newComponent.id,
       }
-
-      // Update history after state change
-      setTimeout(() => get().saveToHistory(), 0)
-
-      return newState
     })
+
+    setTimeout(() => get().saveToHistory(), 0)
   },
 
-  // Update a component property
   updateComponentProperty: (id, property, value) => {
+    stompService.send({
+      type: ACTION_TYPES.UPDATE_COMPONENT_PROPERTY,
+      payload: { id, property, value }
+    })
+
     set((state) => {
-      const newTree = JSON.parse(JSON.stringify(state.componentTree))
-
-      const updateProperty = (node: ComponentNode) => {
-        if (node.id === id) {
-          // Handle nested properties like "style.width"
-          if (property.includes(".")) {
-            const [obj, prop] = property.split(".")
-            if (!node[obj]) {
-              node[obj] = {}
-            }
-            node[obj][prop] = value
-          } else {
-            node.properties[property] = value
-          }
-          return true
-        }
-
-        for (const child of node.children) {
-          if (updateProperty(child)) {
-            return true
-          }
-        }
-
-        return false
-      }
-
-      updateProperty(newTree)
-
-      // Save to history
-      setTimeout(() => get().saveToHistory(), 0)
-
+      const newTree = updateComponentPropertyInTree(state.componentTree, id, property, value)
       return { componentTree: newTree }
     })
+
+    setTimeout(() => get().saveToHistory(), 0)
   },
 
   updateComponent: (componentNode) => {
+    stompService.send({
+      type: ACTION_TYPES.UPDATE_COMPONENT,
+      payload: componentNode,
+    })
+
     set((state) => {
-      const newTree = JSON.parse(JSON.stringify(state.componentTree));
-
-      const updateNode = (node: ComponentNode): boolean => {
-        if (node.id === componentNode.id) {
-          Object.assign(node, componentNode);
-          return true;
-        }
-
-        for (const child of node.children) {
-          if (updateNode(child)) {
-            return true;
-          }
-        }
-
-        return false;
-      };
-
-      updateNode(newTree);
-
-      // Guardar en historial
-      setTimeout(() => get().saveToHistory(), 0);
-
-      return { componentTree: newTree };
-    });
-  },
-
-
-  // Move a component
-  moveComponent: (id, x, y) => {
-    set((state) => {
-      const newTree = JSON.parse(JSON.stringify(state.componentTree))
-
-      const updatePosition = (node: ComponentNode) => {
-        if (node.id === id) {
-          node.position = { x, y }
-          return true
-        }
-
-        for (const child of node.children) {
-          if (updatePosition(child)) {
-            return true
-          }
-        }
-
-        return false
-      }
-
-      updatePosition(newTree)
-
-      // Save to history
-      setTimeout(() => get().saveToHistory(), 0)
-
+      const newTree = updateComponentInTree(state.componentTree, componentNode)
       return { componentTree: newTree }
     })
+
+    setTimeout(() => get().saveToHistory(), 0)
   },
 
-  // Delete a component
-  deleteComponent: (id) => {
+  moveComponent: (id, x, y) => {
+    // Send to WebSocket
+    stompService.send({
+      type: ACTION_TYPES.MOVE_COMPONENT,
+      payload: {
+        componentId: id,
+        x,
+        y,
+        pageId: get().currentPageId,
+      },
+    })
+
     set((state) => {
-      const newTree = JSON.parse(JSON.stringify(state.componentTree))
+      const newTree = updateComponentPositionInTree(state.componentTree, id, x, y)
+      return { componentTree: newTree }
+    })
 
-      const deleteFromParent = (node: ComponentNode) => {
-        node.children = node.children.filter((child) => {
-          if (child.id === id) {
-            return false
-          }
+    setTimeout(() => get().saveToHistory(), 0)
+  },
 
-          deleteFromParent(child)
-          return true
-        })
-      }
+  deleteComponent: (id) => {
+    // Send to WebSocket
+    stompService.send({
+      type: ACTION_TYPES.DELETE_COMPONENT,
+      payload: {
+        componentId: id,
+        pageId: get().currentPageId,
+      },
+    })
 
-      deleteFromParent(newTree)
-
-      // Save to history
-      setTimeout(() => get().saveToHistory(), 0)
+    set((state) => {
+      const newTree = deleteComponentFromTree(state.componentTree, id)
 
       return {
         componentTree: newTree,
         selectedComponentId: null,
       }
     })
+
+    setTimeout(() => get().saveToHistory(), 0)
   },
 
-  // Select a component
   selectComponent: (id) => {
     set({ selectedComponentId: id })
   },
 
-  // Get the selected component
   getSelectedComponent: () => {
     const { componentTree, selectedComponentId } = get()
     if (!selectedComponentId) return null
 
-    return get().findComponent(componentTree, selectedComponentId)
+    return findComponent(componentTree, selectedComponentId)
   },
 
-  // Wrap a component with another component
   wrapComponent: (id, wrapperType) => {
     set((state) => {
       const newTree = JSON.parse(JSON.stringify(state.componentTree))
-      const component = get().findComponent(newTree, id)
-      const parent = get().findParent(newTree, id)
+      const component = findComponent(newTree, id)
+      const parent = findParent(newTree, id)
 
       if (!component || !parent) return state
 
-      // Create the wrapper component
       const wrapper: ComponentNode = {
         id: uuidv4(),
         type: wrapperType,
@@ -473,37 +768,33 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
         position: { ...component.position },
       }
 
-      // Replace the component with the wrapper in the parent's children
       const index = parent.children.findIndex((child) => child.id === id)
       if (index !== -1) {
         parent.children[index] = wrapper
         wrapper.children.push(component)
       }
 
-      // Save to history
-      setTimeout(() => get().saveToHistory(), 0)
-
       return {
         componentTree: newTree,
         selectedComponentId: wrapper.id,
       }
     })
+
+    setTimeout(() => get().saveToHistory(), 0)
   },
 
-  // Copy a component to clipboard
   copyComponent: (id) => {
     const { componentTree } = get()
-    const component = get().findComponent(componentTree, id)
+    const component = findComponent(componentTree, id)
 
     if (component) {
       set({ clipboard: JSON.parse(JSON.stringify(component)) })
     }
   },
 
-  // Cut a component to clipboard
   cutComponent: (id) => {
     const { componentTree } = get()
-    const component = get().findComponent(componentTree, id)
+    const component = findComponent(componentTree, id)
 
     if (component) {
       set({ clipboard: JSON.parse(JSON.stringify(component)) })
@@ -511,23 +802,16 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     }
   },
 
-  // Paste a component from clipboard
   pasteComponent: (targetId) => {
     const { clipboard } = get()
 
     if (!clipboard) return false
 
-    // Clone the clipboard to create a new component with a new ID
-    const clone = get().cloneComponent(clipboard)
+    const clone = cloneComponent(clipboard)
 
     if (!targetId) {
-      // Paste at root level
       set((state) => {
-        const newTree = JSON.parse(JSON.stringify(state.componentTree))
-        newTree.children.push(clone)
-
-        // Save to history
-        setTimeout(() => get().saveToHistory(), 0)
+        const newTree = addComponentToTree(state.componentTree, clone, null)
 
         return {
           componentTree: newTree,
@@ -535,16 +819,11 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
         }
       })
     } else {
-      // Paste as child of target
       set((state) => {
-        const newTree = JSON.parse(JSON.stringify(state.componentTree))
-        const target = get().findComponent(newTree, targetId)
+        const target = findComponent(state.componentTree, targetId)
 
         if (target) {
-          target.children.push(clone)
-
-          // Save to history
-          setTimeout(() => get().saveToHistory(), 0)
+          const newTree = addComponentToTree(state.componentTree, clone, targetId)
 
           return {
             componentTree: newTree,
@@ -556,13 +835,13 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       })
     }
 
+    setTimeout(() => get().saveToHistory(), 0)
     return true
   },
 
-  // Save a component as a custom component
   saveAsCustomComponent: (id) => {
     const { componentTree } = get()
-    const component = get().findComponent(componentTree, id)
+    const component = findComponent(componentTree, id)
 
     if (component) {
       set((state) => ({
@@ -571,7 +850,6 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     }
   },
 
-  // Undo the last action
   undo: () => {
     set((state) => {
       const { history, historyIndex } = state
@@ -590,7 +868,6 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     })
   },
 
-  // Redo the last undone action
   redo: () => {
     set((state) => {
       const { history, historyIndex } = state
@@ -609,24 +886,17 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     })
   },
 
-  // Set the component tree (used for loading saved designs)
   setComponentTree: (tree) => {
     set((state) => {
-      const newState = {
-        componentTree: tree,
-        selectedComponentId: null,
-      }
-
-      // Update the current page's component tree
       const updatedPages = state.pages.map((page) =>
         page.id === state.currentPageId ? { ...page, componentTree: JSON.parse(JSON.stringify(tree)) } : page,
       )
 
-      // Save to history
       setTimeout(() => get().saveToHistory(), 0)
 
       return {
-        ...newState,
+        componentTree: tree,
+        selectedComponentId: null,
         pages: updatedPages,
       }
     })

@@ -19,6 +19,7 @@ interface AuthState {
   logout: () => void;
   setUser: (user: User | null) => void;
   setRegisterSuccessMessage: (msg: string | null) => void;
+  isAuth: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -50,6 +51,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const data = await response.json();
       localStorage.setItem("token", data.token);
+      localStorage.setItem("user", data.user);
 
       set({
         isAuthenticated: true,
@@ -70,6 +72,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setUser: (user) => {
     set({ user, isAuthenticated: !!user });
+  },
+
+  isAuth: () => {
+    return localStorage.getItem("token")? true: false;
   },
 
   setRegisterSuccessMessage: (msg) => {

@@ -104,3 +104,7 @@ export function parseJsonToComponentNodes(jsonString: string): ComponentNode[] {
 
   return parsed as ComponentNode[];
 }
+
+export function assertNever(x: never): never {
+  throw new Error(`Unhandled action type: ${x}`);
+}

@@ -78,7 +78,6 @@ export default function ChatPanel() {
 
       const jsonText = extractJsonBlock(assistantMessage);
 
-      console.log(jsonText);
       if (!jsonText) {
         toast.warning("No se encontró un bloque JSON válido en la respuesta.");
         return;

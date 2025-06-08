@@ -27,9 +27,10 @@ export default function Welcome({ rooms = [] }) {
 
   const { user, error } = useAuthStore.getState();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
+  const { isAuth } = useAuthStore();
   const { pages } = useDesignerStore();
 
+  
   useEffect(() => {
     const fetchUserRooms = async () => {
       try {
@@ -38,7 +39,7 @@ export default function Welcome({ rooms = [] }) {
         if (typeof window !== "undefined") {
           token = localStorage.getItem("token");
         }
-        if (user && !error && token) {
+        if (!error && token) {
           const response = await fetch(API_ROUTES.GET_ROOMS_USER.url, {
             method: API_ROUTES.GET_ROOMS_USER.method,
             headers: {
@@ -46,11 +47,11 @@ export default function Welcome({ rooms = [] }) {
               Authorization: `Bearer ${token}`,
             },
           });
-
+          
           if (!response.ok) {
             throw new Error("Error al obtener las salas");
           }
-
+          
           const data = await response.json();
           console.log(data);
           setUserRooms(data);
@@ -61,14 +62,15 @@ export default function Welcome({ rooms = [] }) {
         setLoading(false);
       }
     };
-
-    if (isAuthenticated) {
+    console.log(isAuth())
+    
+    if (isAuth()) {
       fetchUserRooms();
     } else {
       setUserRooms([]);
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, []);
 
   const handleCreateRoom = () => {
     setShowCreateModal(true);
