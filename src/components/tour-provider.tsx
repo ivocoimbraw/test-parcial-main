@@ -56,7 +56,7 @@ const tourSteps: TourStep[] = [
     id: "phone-preview",
     title: "Vista Previa del Diseño",
     description:
-      "Esta es tu área de trabajo principal donde puedes ver cómo se verá tu aplicación en tiempo real. Puedes arrastrar componentes aquí y organizarlos visualmente.",
+      "Esta es tu área de trabajo principal donde puedes ver cómo se verá tu aplicación. Puedes arrastrar componentes aquí y organizarlos visualmente.",
     target: '[data-tour="phone-preview"]',
     position: "left",
   },
