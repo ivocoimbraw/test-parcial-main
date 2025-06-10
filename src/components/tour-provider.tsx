@@ -437,7 +437,7 @@ export function TourButton() {
   return (
     <Button variant="outline" size="sm" onClick={handleStartTour} className="gap-2" disabled={isActive}>
       <HelpCircle className="w-4 h-4" />
-      Manual de Usuario
+      User Manual
     </Button>
   );
 }

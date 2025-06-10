@@ -25,12 +25,17 @@ export default function Welcome({ rooms = [] }) {
   const [newRoomName, setNewRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
+  // Estado para controlar el modal de unirse a sala
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [roomLink, setRoomLink] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState("");
+
   const { user, error } = useAuthStore.getState();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { isAuth } = useAuthStore();
   const { pages } = useDesignerStore();
 
-  
   useEffect(() => {
     const fetchUserRooms = async () => {
       try {
@@ -47,11 +52,11 @@ export default function Welcome({ rooms = [] }) {
               Authorization: `Bearer ${token}`,
             },
           });
-          
+
           if (!response.ok) {
             throw new Error("Error al obtener las salas");
           }
-          
+
           const data = await response.json();
           console.log(data);
           setUserRooms(data);
@@ -62,8 +67,8 @@ export default function Welcome({ rooms = [] }) {
         setLoading(false);
       }
     };
-    console.log(isAuth())
-    
+    console.log(isAuth());
+
     if (isAuth()) {
       fetchUserRooms();
     } else {
@@ -76,9 +81,71 @@ export default function Welcome({ rooms = [] }) {
     setShowCreateModal(true);
   };
 
-  const handleCloseModal = () => {
+  const handleJoinRoom = () => {
+    setShowJoinModal(true);
+    setJoinError("");
+  };
+
+  const handleCloseCreateModal = () => {
     setShowCreateModal(false);
     setNewRoomName("");
+  };
+
+  const handleCloseJoinModal = () => {
+    setShowJoinModal(false);
+    setRoomLink("");
+    setJoinError("");
+  };
+
+  const extractRoomIdFromLink = (link: string) => {
+    try {
+      const patterns = [
+        /\/editor-desing\/(\d+)/, // /editor-desing/123
+        /\/room\/(\d+)/, // /room/123
+        /roomId=(\d+)/, // ?roomId=123
+        /id=(\d+)/, // ?id=123
+        /^(\d+)$/, // Solo el número
+      ];
+
+      for (const pattern of patterns) {
+        const match = link.match(pattern);
+        if (match) {
+          return match[1];
+        }
+      }
+
+      return null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const handleConfirmJoin = async () => {
+    if (!roomLink.trim()) {
+      setJoinError("Por favor ingresa un enlace válido");
+      return;
+    }
+
+    const roomId = extractRoomIdFromLink(roomLink.trim());
+
+    if (!roomId) {
+      setJoinError("No se pudo extraer el ID de la sala del enlace proporcionado");
+      return;
+    }
+
+    setIsJoining(true);
+    setJoinError("");
+
+    try {
+      router.push(`/editor-desing/${roomId}`);
+      setShowJoinModal(false);
+      setRoomLink("");
+    } catch (error) {
+      console.error("Error al unirse a la sala:", error);
+      setJoinError("Error al acceder a la sala. Verifica que el enlace sea correcto.");
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   const handleConfirmCreate = async () => {
@@ -119,7 +186,7 @@ export default function Welcome({ rooms = [] }) {
     }
   };
 
-  const handleEnterRoom = (roomId) => {
+  const handleEnterRoom = (roomId: number) => {
     router.push(`/editor-desing/${roomId}`);
   };
 
@@ -158,7 +225,8 @@ export default function Welcome({ rooms = [] }) {
           </div>
         </div>
 
-        <div className="flex justify-center mb-16">
+        {/* Botones de acción */}
+        <div className="flex flex-col sm:flex-row justify-center gap-6 mb-16">
           <button
             onClick={handleCreateRoom}
             className="group relative overflow-hidden bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 p-1 rounded-2xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25"
@@ -182,6 +250,36 @@ export default function Welcome({ rooms = [] }) {
               </div>
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-cyan-500/20 group-hover:via-purple-500/20 group-hover:to-pink-500/20 rounded-2xl transition-all duration-500"></div>
+          </button>
+
+          <button
+            onClick={handleJoinRoom}
+            className="group relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 p-1 rounded-2xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-500/25"
+          >
+            <div className="relative bg-black rounded-xl px-10 py-4 transition-all duration-300 group-hover:bg-gray-900/50">
+              <div className="flex items-center justify-center space-x-3 text-white">
+                <div className="relative">
+                  <svg
+                    className="w-6 h-6 transition-transform duration-300 group-hover:scale-110"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 bg-emerald-400/50 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-emerald-200 to-cyan-200 bg-clip-text text-transparent">
+                  JOIN ROOM
+                </span>
+              </div>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-cyan-500/0 group-hover:from-emerald-500/20 group-hover:via-teal-500/20 group-hover:to-cyan-500/20 rounded-2xl transition-all duration-500"></div>
           </button>
         </div>
 
@@ -207,20 +305,13 @@ export default function Welcome({ rooms = [] }) {
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                   <div className="relative p-8">
-                    {/* Información de la sala */}
                     <div className="mb-6">
                       <h3 className="text-xl font-bold text-white mb-3 group-hover:text-cyan-200 transition-colors duration-300">
-                        {room.name}
+                        {room.name || "Untitled Room"}
                       </h3>
                       <div className="flex items-center space-x-2 text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        {/* <Link
-                          href={`/editor-desing/${room.id}`}
-                          className="text-sm font-medium text-cyan-300 hover:underline"
-                        >
-                          View room {room.id}
-                        </Link> */}
-                        <p className="text-gray-400 text-sm">Creado el {room.createdAt}</p>
+                        <p className="text-gray-400 text-sm">Created the {room.createdAt}</p>
                       </div>
                     </div>
 
@@ -257,14 +348,14 @@ export default function Welcome({ rooms = [] }) {
               </div>
               <p className="text-gray-400 text-xl mb-4 font-medium">EMPTY SPACE DETECTED</p>
               <p className="text-gray-500 text-sm max-w-md mx-auto">
-                Start your first connection by creating a collaboration room.
+                Start your first connection by creating a collaboration room or joining an existing one.
               </p>
             </div>
           )}
         </div>
       </main>
 
-      {/* Modal futurista para crear sala */}
+      {/* Modal para crear sala */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="relative">
@@ -274,12 +365,12 @@ export default function Welcome({ rooms = [] }) {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className="text-2xl font-bold bg-gradient-to-r from-cyan-300 to-purple-300 bg-clip-text text-transparent">
-                    NUEVA CONEXIÓN
+                    NEW CONNECTION
                   </h3>
                   <div className="w-16 h-0.5 bg-gradient-to-r from-cyan-400 to-purple-400 mt-2 rounded-full"></div>
                 </div>
                 <button
-                  onClick={handleCloseModal}
+                  onClick={handleCloseCreateModal}
                   disabled={isCreating}
                   className="text-gray-400 hover:text-red-400 transition-all duration-300 disabled:opacity-50 p-2 rounded-xl hover:bg-red-500/10"
                 >
@@ -294,7 +385,7 @@ export default function Welcome({ rooms = [] }) {
                   htmlFor="roomName"
                   className="block text-sm font-bold text-cyan-300 mb-4 uppercase tracking-wider"
                 >
-                  Identificador de Sala
+                  Room identifier
                 </label>
                 <div className="relative">
                   <input
@@ -319,18 +410,18 @@ export default function Welcome({ rooms = [] }) {
                         clipRule="evenodd"
                       />
                     </svg>
-                    <span>Límite de caracteres excedido (50 max)</span>
+                    <span>Character limit exceeded (50 max)</span>
                   </p>
                 )}
               </div>
 
               <div className="flex space-x-6">
                 <button
-                  onClick={handleCloseModal}
+                  onClick={handleCloseCreateModal}
                   disabled={isCreating}
                   className="flex-1 px-6 py-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-500/30 text-gray-300 rounded-xl font-semibold transition-all duration-300 hover:from-gray-500/30 hover:to-gray-600/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
                 >
-                  CANCELAR
+                  CANCEL
                 </button>
                 <button
                   onClick={handleConfirmCreate}
@@ -342,12 +433,109 @@ export default function Welcome({ rooms = [] }) {
                       <div className="flex items-center justify-center text-white space-x-3">
                         <div className="w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
                         <span className="bg-gradient-to-r from-cyan-200 to-purple-200 bg-clip-text text-transparent">
-                          INICIALIZANDO...
+                          INITIALIZING...
                         </span>
                       </div>
                     ) : (
                       <span className="bg-gradient-to-r from-cyan-200 to-purple-200 bg-clip-text text-transparent">
-                        CREAR SALA
+                        CREATE ROOM
+                      </span>
+                    )}
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para unirse a sala */}
+      {showJoinModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="relative">
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/50 via-teal-500/50 to-cyan-500/50 rounded-3xl blur opacity-60 animate-pulse"></div>
+
+            <div className="relative bg-gradient-to-br from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-xl rounded-2xl p-12 w-full max-w-4xl border border-emerald-500/30 shadow-2xl">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
+                    JOIN ROOM
+                  </h3>
+                  <div className="w-16 h-0.5 bg-gradient-to-r from-emerald-400 to-cyan-400 mt-2 rounded-full"></div>
+                </div>
+                <button
+                  onClick={handleCloseJoinModal}
+                  disabled={isJoining}
+                  className="text-gray-400 hover:text-red-400 transition-all duration-300 disabled:opacity-50 p-2 rounded-xl hover:bg-red-500/10"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mb-8">
+                <label
+                  htmlFor="roomLink"
+                  className="block text-sm font-bold text-emerald-300 mb-4 uppercase tracking-wider"
+                >
+                  Room Link
+                </label>
+                <div className="relative">
+                  <input
+                    id="roomLink"
+                    type="text"
+                    value={roomLink}
+                    onChange={(e) => {
+                      setRoomLink(e.target.value);
+                      setJoinError("");
+                    }}
+                    onKeyPress={(e) => e.key === "Enter" && !isJoining && handleConfirmJoin()}
+                    placeholder="Ej: https://app.com/editor-desing/123 o solo el ID: 123"
+                    disabled={isJoining}
+                    className="w-full px-6 py-4 bg-black/50 border border-emerald-400/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400/50 transition-all duration-300 disabled:opacity-50 backdrop-blur-sm"
+                    autoFocus
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-cyan-500/5 rounded-xl pointer-events-none opacity-0 focus-within:opacity-100 transition-opacity duration-300"></div>
+                </div>
+                {joinError && (
+                  <p className="text-red-400 text-sm mt-3 flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>{joinError}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex space-x-6">
+                <button
+                  onClick={handleCloseJoinModal}
+                  disabled={isJoining}
+                  className="flex-1 px-6 py-2 bg-gradient-to-r from-gray-600/20 to-gray-700/20 border border-gray-500/30 text-gray-300 rounded-xl font-semibold transition-all duration-300 hover:from-gray-500/30 hover:to-gray-600/30 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleConfirmJoin}
+                  disabled={!roomLink.trim() || isJoining}
+                  className="flex-1 relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 p-0.5 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-emerald-500/25"
+                >
+                  <div className="bg-black rounded-lg px-6 py-1.5 font-semibold flex items-center justify-center">
+                    {isJoining ? (
+                      <div className="flex items-center justify-center text-white space-x-3">
+                        <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="bg-gradient-to-r from-emerald-200 to-cyan-200 bg-clip-text text-transparent">
+                          CONNECTING...
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="bg-gradient-to-r from-emerald-200 to-cyan-200 bg-clip-text text-transparent">
+                        JOIN
                       </span>
                     )}
                   </div>
