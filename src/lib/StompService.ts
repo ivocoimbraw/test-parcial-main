@@ -32,7 +32,7 @@ class StompService {
 		this.clientId = clientId;
 
 		this.client = new Client({
-			brokerURL: 'ws://localhost:8080/ws-crud',
+			brokerURL: process.env.NEXT_PUBLIC_SERVER_URL_SOCKET,
 			reconnectDelay: 5000,
 			connectHeaders: {
 				Authorization: `Bearer ${token}`
